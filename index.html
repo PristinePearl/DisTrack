@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Dispatch Tracker — Pristine Pearl Pharma</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg:#f1f5f9; --surface:#fff; --surface2:#f8fafc; --border:#e2e8f0; --border2:#cbd5e1;
+  --text:#0f172a; --text2:#334155; --muted:#64748b;
+  --blue:#2563eb; --blue-lt:#eff6ff; --blue-md:#bfdbfe;
+  --green:#16a34a; --green-lt:#f0fdf4; --green-md:#bbf7d0;
+  --amber:#d97706; --amber-lt:#fffbeb; --amber-md:#fde68a;
+  --red:#dc2626; --red-lt:#fef2f2; --red-md:#fecaca;
+  --indigo:#4f46e5; --indigo-lt:#eef2ff; --indigo-md:#c7d2fe;
+  --cyan:#0891b2; --cyan-lt:#ecfeff; --cyan-md:#a5f3fc;
+  --purple:#7c3aed; --purple-lt:#f5f3ff;
+  --sidebar:220px; --top:52px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* ── LOGIN ── */
+#login-page{
+  display:flex;align-items:center;justify-content:center;min-height:100vh;
+  background:linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 50%,#0369a1 100%);
+}
+.lc{background:#fff;border-radius:20px;padding:44px 40px;width:380px;box-shadow:0 25px 80px rgba(0,0,0,.25)}
+.lc-logo{width:52px;height:52px;border-radius:14px;background:var(--blue);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:18px;font-weight:800;color:#fff;letter-spacing:-.03em}
+.lc-title{text-align:center;font-size:22px;font-weight:800;color:var(--text);margin-bottom:4px}
+.lc-sub{text-align:center;font-size:12px;color:var(--muted);margin-bottom:28px}
+.lc-label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;display:block}
+.lc-input{width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;color:var(--text);background:var(--surface2);outline:none;transition:border .15s,box-shadow .15s;margin-bottom:14px}
+.lc-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.lc-btn{width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s;margin-top:4px}
+.lc-btn:hover:not(:disabled){background:#1d4ed8}
+.lc-btn:disabled{opacity:.6;cursor:not-allowed}
+.lc-err{background:var(--red-lt);border:1px solid var(--red-md);color:var(--red);padding:9px 13px;border-radius:8px;font-size:11px;margin-bottom:10px;display:none}
+.lc-err.show{display:block}
+.lc-foot{text-align:center;margin-top:16px;font-size:10px;color:var(--muted)}
+
+/* ── APP SHELL ── */
+#app{display:none;min-height:100vh;flex-direction:column}
+
+/* ── TOPBAR ── */
+#topbar{
+  height:var(--top);background:#1e40af;display:flex;align-items:center;
+  padding:0 20px;gap:12px;flex-shrink:0;position:sticky;top:0;z-index:50;
+  box-shadow:0 1px 0 rgba(255,255,255,.1),0 2px 8px rgba(0,0,0,.2);
+}
+.tb-logo{width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
+.tb-name{font-size:15px;font-weight:700;color:#fff}
+.tb-sep{width:1px;height:16px;background:rgba(255,255,255,.2)}
+.tb-sub{font-size:11px;color:rgba(255,255,255,.65)}
+.tb-spacer{flex:1}
+.tb-user{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);padding:5px 12px;border-radius:8px}
+.tb-avatar{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+.tb-uname{font-size:11px;color:#fff;font-weight:500}
+.tb-logout{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:5px 12px;border-radius:7px;font-size:11px;font-weight:500;cursor:pointer;transition:background .15s}
+.tb-logout:hover{background:rgba(255,255,255,.25)}
+
+/* ── LAYOUT ── */
+#body{display:flex;flex:1;min-height:0}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  width:var(--sidebar);background:var(--surface);border-right:1px solid var(--border);
+  flex-shrink:0;padding:16px 10px;display:flex;flex-direction:column;gap:2px;
+  position:sticky;top:var(--top);height:calc(100vh - var(--top));overflow-y:auto;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;
+  font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;border:none;
+  background:transparent;width:100%;text-align:left;transition:all .15s;
+}
+.nav-item:hover{background:var(--surface2);color:var(--text2)}
+.nav-item.active{background:var(--blue-lt);color:var(--blue);font-weight:600}
+.nav-item .ni-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+.nav-section{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:10px 12px 4px;margin-top:8px}
+
+/* ── MAIN ── */
+#main{flex:1;overflow-y:auto;padding:20px 24px}
+
+/* ── PAGE HEADING ── */
+.pg-head{margin-bottom:20px}
+.pg-title{font-size:20px;font-weight:800;color:var(--text);line-height:1}
+.pg-sub{font-size:12px;color:var(--muted);margin-top:4px}
+
+/* ── KPI STRIP ── */
+.kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:16px 18px;position:relative;overflow:hidden;
+}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px}
+.kpi.k-blue::after{background:var(--blue)}
+.kpi.k-amber::after{background:var(--amber)}
+.kpi.k-green::after{background:var(--green)}
+.kpi.k-red::after{background:var(--red)}
+.kpi.k-indigo::after{background:var(--indigo)}
+.kpi.k-cyan::after{background:var(--cyan)}
+.kpi.k-gray::after{background:var(--muted)}
+.kpi-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px}
+.kpi-val{font-size:28px;font-weight:800;line-height:1;color:var(--text)}
+.kpi.k-blue .kpi-val{color:var(--blue)}
+.kpi.k-amber .kpi-val{color:var(--amber)}
+.kpi.k-green .kpi-val{color:var(--green)}
+.kpi.k-red .kpi-val{color:var(--red)}
+.kpi.k-indigo .kpi-val{color:var(--indigo)}
+.kpi.k-cyan .kpi-val{color:var(--cyan)}
+.kpi-icon{position:absolute;right:14px;top:14px;font-size:20px;opacity:.3}
+
+/* ── STATUS ROW ── */
+.status-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px}
+.ss-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px}
+.ss-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.ss-dot.d-amber{background:var(--amber)}
+.ss-dot.d-blue{background:var(--blue)}
+.ss-dot.d-cyan{background:var(--cyan)}
+.ss-dot.d-green{background:var(--green)}
+.ss-dot.d-red{background:var(--red)}
+.ss-info{flex:1;min-width:0}
+.ss-lbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.ss-val{font-size:18px;font-weight:800;color:var(--text);line-height:1.2}
+
+/* ── GRID ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-360{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start}
+
+/* ── CARD ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.card-hd{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--surface)}
+.card-title{font-size:12px;font-weight:700;color:var(--text);letter-spacing:.01em}
+.card-body{padding:16px}
+
+/* ── COURIER CHART ── */
+.cr-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.cr-row:last-child{border-bottom:none}
+.cr-name{width:120px;font-size:12px;font-weight:500;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cr-bg{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.cr-fill{height:100%;background:linear-gradient(90deg,var(--blue),#60a5fa);border-radius:3px;transition:width .6s ease}
+.cr-cnt{font-size:11px;font-weight:700;color:var(--blue);width:26px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* ── PENDING LIST ── */
+.pl-row{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);transition:background .1s}
+.pl-row:last-child{border-bottom:none}
+.pl-row:hover{background:var(--blue-lt)}
+.pl-id{font-size:10px;font-family:monospace;color:var(--indigo);background:var(--indigo-lt);border:1px solid var(--indigo-md);padding:2px 7px;border-radius:4px;font-weight:600;white-space:nowrap}
+.pl-inv{font-size:12px;font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl-place{font-size:11px;color:var(--muted);white-space:nowrap}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface2);position:sticky;top:0;z-index:1}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--blue-lt)}
+tbody td{padding:9px 12px;font-size:12px;color:var(--text2);white-space:nowrap}
+.td-m{font-family:monospace;font-size:11px}
+.td-b{font-weight:600;color:var(--text)}
+.td-mu{color:var(--muted)}
+
+/* ── PILLS ── */
+.pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.p-pending{background:var(--amber-md);color:var(--amber)}
+.p-dispatched{background:var(--blue-md);color:var(--blue)}
+.p-delivered{background:var(--green-md);color:var(--green)}
+.p-returned{background:var(--red-md);color:var(--red)}
+.p-transit{background:var(--cyan-md);color:var(--cyan)}
+.p-cancelled{background:var(--border);color:var(--muted)}
+
+/* ── TYPE CHIPS ── */
+.t-sale{font-size:10px;font-weight:700;color:var(--cyan);background:var(--cyan-lt);border:1px solid var(--cyan-md);padding:2px 8px;border-radius:5px}
+.t-sample{font-size:10px;font-weight:700;color:var(--purple);background:var(--purple-lt);border:1px solid #ddd6fe;padding:2px 8px;border-radius:5px}
+.t-other{font-size:10px;font-weight:700;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:5px}
+
+/* ── ID CHIP ── */
+.id-chip{font-family:monospace;font-size:10px;color:var(--indigo);background:var(--indigo-lt);border:1px solid var(--indigo-md);padding:2px 7px;border-radius:4px;font-weight:600}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;border:none;transition:all .15s;font-family:'Inter',sans-serif}
+.btn-primary{background:var(--blue);color:#fff;box-shadow:0 1px 3px rgba(37,99,235,.3)}
+.btn-primary:hover{background:#1d4ed8}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--surface2);border-color:var(--border2)}
+.btn-edit{background:var(--blue-lt);color:var(--blue);border:1px solid var(--blue-md)}
+.btn-edit:hover{background:var(--blue-md)}
+.btn-danger{background:var(--red-lt);color:var(--red);border:1px solid var(--red-md)}
+.btn-danger:hover{background:var(--red-md)}
+.btn-sm{padding:4px 10px;font-size:11px;border-radius:6px}
+
+/* ── FORM ── */
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px}
+.fi,.fs{width:100%;padding:8px 11px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-family:'Inter',sans-serif;outline:none;transition:border .15s,box-shadow .15s}
+.fi:focus,.fs:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.fi[readonly]{background:var(--surface2);color:var(--muted);cursor:default}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.fh{font-size:10px;color:var(--muted);margin-top:3px}
+
+/* ── FILTER BAR ── */
+.filter-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.filter-bar .fi,.filter-bar .fs{width:auto;padding:6px 10px}
+.sw{position:relative}
+.sw .fi{padding-left:30px;min-width:220px}
+.sw-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone{border:2px dashed var(--border2);border-radius:12px;padding:44px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface2)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--blue);background:var(--blue-lt)}
+.uz-icon{font-size:38px;margin-bottom:12px}
+.uz-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+.uz-sub{font-size:11px;color:var(--muted)}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.4);z-index:100;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,.2)}
+.modal-hd{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface2)}
+.modal-title{font-size:14px;font-weight:700;color:var(--text)}
+.modal-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.modal-body{padding:20px}
+.modal-ft{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;background:var(--surface2)}
+.modal-close{background:transparent;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:3px 7px;border-radius:5px;transition:all .15s}
+.modal-close:hover{color:var(--text);background:var(--border)}
+.locked-sec{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:14px;margin-bottom:18px}
+.locked-hd{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.locked-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px}
+.locked-item label{font-size:10px;color:var(--muted);display:block;margin-bottom:2px}
+.locked-item span{font-size:12px;color:var(--text2);font-weight:500}
+.sec-head{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+
+/* ── DAYS WARNING ── */
+.days-ok{color:var(--muted)}
+.days-warn{color:var(--amber);font-weight:600}
+.days-over{color:var(--red);font-weight:600}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px;max-width:340px}
+.toast-item{padding:10px 16px;border-radius:9px;font-size:12px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.12);animation:toastIn .2s ease;display:flex;align-items:center;gap:8px;word-break:break-word}
+.toast-ok{background:var(--surface);border:1px solid var(--green-md);color:var(--green)}
+.toast-err{background:var(--surface);border:1px solid var(--red-md);color:var(--red)}
+.toast-info{background:var(--surface);border:1px solid var(--blue-md);color:var(--blue)}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty-icon{font-size:36px;margin-bottom:10px}
+.empty-text{font-size:13px;color:var(--muted)}
+.empty-hint{font-size:11px;color:var(--border2);margin-top:4px}
+
+/* ── BADGE ── */
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 5px;border-radius:10px;font-size:10px;font-weight:700;background:var(--blue);color:#fff}
+.badge-amber{background:var(--amber)}
+
+/* ── SPINNER ── */
+.spinner{width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite;display:inline-block;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── LOADING OVERLAY ── */
+#load-overlay{position:fixed;inset:0;background:rgba(255,255,255,.8);z-index:200;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;backdrop-filter:blur(2px)}
+#load-overlay.show{display:flex}
+.load-spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+.load-text{font-size:13px;color:var(--muted);font-weight:500}
+
+@media(max-width:900px){
+  #sidebar{display:none}
+  .kpi-strip{grid-template-columns:repeat(2,1fr)}
+  .status-strip{grid-template-columns:repeat(2,1fr)}
+  .grid-2{grid-template-columns:1fr}
+  .grid-360{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-page">
+  <div class="lc">
+    <div class="lc-logo">PPP</div>
+    <div class="lc-title">Dispatch Tracker</div>
+    <div class="lc-sub">Pristine Pearl Pharma Pvt Ltd</div>
+    <div class="lc-err" id="login-error"></div>
+    <label class="lc-label">Username</label>
+    <input class="lc-input" id="login-username" type="text" placeholder="Enter username" onkeypress="if(event.key==='Enter')handleLogin()"/>
+    <label class="lc-label">Password</label>
+    <input class="lc-input" id="login-password" type="password" placeholder="Enter password" onkeypress="if(event.key==='Enter')handleLogin()" style="margin-bottom:4px"/>
+    <button class="lc-btn" id="login-btn" onclick="handleLogin()">
+      <span id="login-btn-text">Sign In</span>
+    </button>
+    <div class="lc-foot">Contact admin for access credentials</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" style="display:none;flex-direction:column;min-height:100vh">
+
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="tb-logo">PPP</div>
+    <span class="tb-name">Dispatch Tracker</span>
+    <div class="tb-sep"></div>
+    <span class="tb-sub">Pristine Pearl Pharma</span>
+    <div class="tb-spacer"></div>
+    <div class="tb-user">
+      <div class="tb-avatar" id="user-avatar">A</div>
+      <span class="tb-uname" id="user-name">User</span>
+    </div>
+    <button class="tb-logout" onclick="handleLogout()">Sign Out</button>
+  </div>
+
+  <!-- BODY -->
+  <div id="body">
+
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+      <div class="nav-section">Navigation</div>
+      <button class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+        <span class="ni-icon">📊</span> Dashboard
+      </button>
+      <button class="nav-item" onclick="showPage('register')" id="nav-register">
+        <span class="ni-icon">📋</span> Dispatch Register
+      </button>
+      <button class="nav-item" onclick="showPage('import')" id="nav-import">
+        <span class="ni-icon">📤</span> Import Excel
+      </button>
+      <button class="nav-item" onclick="showPage('reports')" id="nav-reports">
+        <span class="ni-icon">📈</span> Reports
+      </button>
+    </div>
+
+    <!-- MAIN -->
+    <div id="main">
+
+      <!-- ══ DASHBOARD ══ -->
+      <div id="page-dashboard">
+        <div class="pg-head">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div class="pg-title">Dashboard</div>
+              <div class="pg-sub">Overview of all dispatch activity</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="refreshAll()">↻ Refresh</button>
+          </div>
+        </div>
+
+        <!-- KPI Row 1 -->
+        <div class="kpi-strip">
+          <div class="kpi k-blue">
+            <div class="kpi-icon">📦</div>
+            <div class="kpi-label">Total Dispatches</div>
+            <div class="kpi-val" id="ds-total">—</div>
+          </div>
+          <div class="kpi k-blue" style="--override:1">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-label">Total Invoice Value</div>
+            <div class="kpi-val" id="ds-value" style="font-size:20px">—</div>
+          </div>
+          <div class="kpi k-gray">
+            <div class="kpi-icon">📫</div>
+            <div class="kpi-label">Total Boxes</div>
+            <div class="kpi-val" id="ds-boxes">—</div>
+          </div>
+          <div class="kpi k-red">
+            <div class="kpi-icon">↩️</div>
+            <div class="kpi-label">Returned</div>
+            <div class="kpi-val" id="ds-returned">—</div>
+          </div>
+        </div>
+
+        <!-- Status Strip -->
+        <div class="status-strip" style="margin-bottom:20px">
+          <div class="ss-card">
+            <div class="ss-dot d-amber"></div>
+            <div class="ss-info"><div class="ss-lbl">Pending</div><div class="ss-val" id="ds-pending">—</div></div>
+          </div>
+          <div class="ss-card">
+            <div class="ss-dot d-blue"></div>
+            <div class="ss-info"><div class="ss-lbl">Dispatched</div><div class="ss-val" id="ds-dispatched">—</div></div>
+          </div>
+          <div class="ss-card">
+            <div class="ss-dot d-cyan"></div>
+            <div class="ss-info"><div class="ss-lbl">In Transit</div><div class="ss-val" id="ds-transit">—</div></div>
+          </div>
+          <div class="ss-card">
+            <div class="ss-dot d-green"></div>
+            <div class="ss-info"><div class="ss-lbl">Delivered</div><div class="ss-val" id="ds-delivered">—</div></div>
+          </div>
+          <div class="ss-card">
+            <div class="ss-dot d-red"></div>
+            <div class="ss-info"><div class="ss-lbl">Cancelled</div><div class="ss-val" id="ds-cancelled">—</div></div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-hd">
+              <span class="card-title">🚚 Courier Breakdown</span>
+            </div>
+            <div class="card-body" id="courier-chart">
+              <div class="empty"><div class="empty-icon">📦</div><div class="empty-text">No courier data yet</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-hd">
+              <span class="card-title">⏳ Pending Follow-up</span>
+              <span id="pending-count" class="badge badge-amber">0</span>
+            </div>
+            <div id="pending-list">
+              <div class="empty"><div class="empty-icon">✅</div><div class="empty-text">Nothing pending</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ REGISTER ══ -->
+      <div id="page-register" style="display:none">
+        <div class="pg-head">
+          <div class="pg-title">Dispatch Register</div>
+          <div class="pg-sub">All dispatch records</div>
+        </div>
+        <div class="card">
+          <div class="card-hd" style="flex-wrap:wrap;gap:10px">
+            <span class="card-title">Records</span>
+            <div class="filter-bar">
+              <div class="sw">
+                <span class="sw-icon">🔍</span>
+                <input class="fi" id="reg-search" placeholder="Inv No / Party / Place / Courier…" oninput="renderRegister()"/>
+              </div>
+              <select class="fs" id="reg-status" onchange="renderRegister()" style="min-width:130px">
+                <option value="">All Status</option>
+                <option>Pending</option><option>Dispatched</option>
+                <option>In Transit</option><option>Delivered</option>
+                <option>Returned</option><option>Cancelled</option>
+              </select>
+              <select class="fs" id="reg-type" onchange="renderRegister()" style="min-width:110px">
+                <option value="">All Types</option>
+                <option>Sale</option><option>Sample</option><option>Gift</option>
+              </select>
+              <button class="btn btn-ghost btn-sm" onclick="loadRegister()">↻ Refresh</button>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th><th>Date</th><th>Type</th><th>Inv No</th>
+                  <th>Party / Staff</th><th>Place</th><th>Value</th>
+                  <th>Courier</th><th>POD</th><th>Boxes</th>
+                  <th>Dispatch Date</th><th>Delivered Date</th><th>Status</th>
+                  <th>Last Updated</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="register-tbody">
+                <tr><td colspan="15"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No records loaded.</div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="reg-footer" style="padding:10px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:none"></div>
+        </div>
+      </div>
+
+      <!-- ══ IMPORT ══ -->
+      <div id="page-import" style="display:none">
+        <div class="pg-head">
+          <div class="pg-title">Import Excel</div>
+          <div class="pg-sub">Upload .xlsx to add records to Google Sheets</div>
+        </div>
+        <div class="grid-360">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="card">
+              <div class="card-hd"><span class="card-title">📤 Upload File</span></div>
+              <div class="card-body">
+                <div class="upload-zone" id="upload-zone"
+                  onclick="document.getElementById('file-input').click()"
+                  ondragover="event.preventDefault();this.classList.add('drag')"
+                  ondragleave="this.classList.remove('drag')"
+                  ondrop="handleDrop(event)">
+                  <div class="uz-icon">📊</div>
+                  <div class="uz-title">Click or drag file here</div>
+                  <div class="uz-sub">Accepts .xlsx / .xls</div>
+                </div>
+                <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none" onchange="readExcel(this)"/>
+                <div id="file-name" style="margin-top:10px;font-size:11px;color:var(--muted);text-align:center"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-hd"><span class="card-title">📄 Expected Columns</span></div>
+              <div class="card-body">
+                <div class="tbl-wrap">
+                  <table>
+                    <thead><tr><th>DATE</th><th>TYPE</th><th>INV NO.</th><th>PARTY</th><th>PLACE</th><th>INV VALUE</th></tr></thead>
+                    <tbody>
+                      <tr><td class="td-m td-mu">20-09-26</td><td><span class="t-sale">Sale</span></td><td class="td-m td-b">101/S/542</td><td>ABC Pharma</td><td>Cochin</td><td class="td-m">5,000</td></tr>
+                      <tr><td class="td-m td-mu">20-09-26</td><td><span class="t-sample">Sample</span></td><td class="td-m td-b">SUP152</td><td>STAFF001</td><td>Chennai</td><td class="td-m">1,200</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="fh" style="margin-top:8px">Row 1 = header. Data from Row 2. Courier / POD not required.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" id="preview-card" style="display:none">
+            <div class="card-hd">
+              <span class="card-title">Preview</span>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span id="preview-count" style="font-size:11px;color:var(--muted)"></span>
+                <button class="btn btn-ghost btn-sm" onclick="clearPreview()">✕ Clear</button>
+                <button class="btn btn-primary" onclick="importToSheet()" id="import-btn">
+                  <span id="import-btn-text">Import to Sheets</span>
+                </button>
+              </div>
+            </div>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Date</th><th>Type</th><th>Inv No</th><th>Party / Staff</th><th>Place</th><th>Value</th><th></th></tr></thead>
+                <tbody id="preview-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="preview-placeholder" class="card" style="display:flex;align-items:center;justify-content:center;min-height:300px">
+            <div class="empty">
+              <div class="empty-icon">📂</div>
+              <div class="empty-text">Upload an Excel file to preview</div>
+              <div class="empty-hint" style="margin-top:6px">Records appear here before import</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ REPORTS ══ -->
+      <div id="page-reports" style="display:none">
+        <div class="pg-head">
+          <div class="pg-title">Reports</div>
+          <div class="pg-sub">Courier summary and pending follow-ups</div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd">
+            <span class="card-title">🚚 Courier-wise Summary</span>
+            <div class="filter-bar">
+              <select class="fs" id="rpt-status" onchange="renderReports()" style="min-width:130px">
+                <option value="">All Status</option>
+                <option>Pending</option><option>Dispatched</option>
+                <option>In Transit</option><option>Delivered</option><option>Returned</option>
+              </select>
+              <button class="btn btn-ghost btn-sm" onclick="renderReports()">↻</button>
+            </div>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Courier</th><th>Dispatches</th><th>Boxes</th><th>Invoice Value</th><th>Pending</th><th>Delivered</th></tr></thead>
+              <tbody id="courier-tbody">
+                <tr><td colspan="6"><div class="empty" style="padding:30px"><div class="empty-text">No data</div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">⏳ Pending Delivery — Follow-up</span></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>ID</th><th>Inv No</th><th>Party</th><th>Place</th><th>Courier</th><th>POD</th><th>Dispatch Date</th><th>Days</th><th>Status</th></tr></thead>
+              <tbody id="followup-tbody">
+                <tr><td colspan="9"><div class="empty" style="padding:30px"><div class="empty-text">No pending deliveries</div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /body -->
+</div><!-- /app -->
+
+<!-- LOADING OVERLAY -->
+<div id="load-overlay">
+  <div class="load-spinner"></div>
+  <div class="load-text">Loading records…</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title">Update Dispatch</div>
+        <div class="modal-sub">Courier &amp; delivery fields only</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="locked-sec">
+        <div class="locked-hd">🔒 Read-only — Import Data</div>
+        <div class="locked-grid">
+          <div class="locked-item"><label>Dispatch ID</label><span id="mo-id"></span></div>
+          <div class="locked-item"><label>Inv Date</label><span id="mo-date"></span></div>
+          <div class="locked-item"><label>Type</label><span id="mo-type"></span></div>
+          <div class="locked-item"><label>Inv No / Supply ID</label><span id="mo-invno"></span></div>
+          <div class="locked-item"><label>Party / Staff</label><span id="mo-party"></span></div>
+          <div class="locked-item"><label>Place</label><span id="mo-place"></span></div>
+          <div class="locked-item"><label>Invoice Value</label><span id="mo-value"></span></div>
+          <div class="locked-item"><label>Uploaded On</label><span id="mo-uploaded"></span></div>
+        </div>
+      </div>
+      <div class="sec-head">✏️ Dispatch Details</div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Courier Name</label><input class="fi" id="mo-courier" placeholder="DTDC, Trackon, Speed & Safe…"/></div>
+        <div class="fg"><label class="fl">POD No.</label><input class="fi" id="mo-pod" placeholder="e.g. D123456789"/></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">No. of Boxes</label><input class="fi" id="mo-boxes" type="number" min="0" placeholder="0"/></div>
+        <div class="fg"><label class="fl">Status</label>
+          <select class="fs" id="mo-status">
+            <option>Pending</option><option>Dispatched</option>
+            <option>In Transit</option><option>Delivered</option>
+            <option>Returned</option><option>Cancelled</option>
+          </select>
+        </div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Dispatch Date</label><input class="fi" id="mo-ddate" type="date"/></div>
+        <div class="fg"><label class="fl">Delivered Date</label><input class="fi" id="mo-dlvdate" type="date"/></div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()" id="save-btn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw2x2NCKlT1CpDHp1hEPEO_LSZzhvY2eo8Gll8-lM7nuYhewodWUAFmfS2_DVUbJSUt/exec";
+let CFG = { url: APPS_SCRIPT_URL, user: null, token: null, typeFilter: null };
+let RECORDS = [];
+
+// ─── INIT ─────────────────────────────────────────────────────────────
+function loadConfig() {
+  const u = sessionStorage.getItem('dispatch_user');
+  const t = sessionStorage.getItem('dispatch_token');
+  if (u && t) {
+    CFG.user = u; CFG.token = t;
+    CFG.typeFilter = sessionStorage.getItem('dispatch_typefilter') || null;
+    showApp();
+  } else {
+    showLogin();
+  }
+}
+
+function showLogin() {
+  document.getElementById('login-page').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  setTimeout(() => document.getElementById('login-username').focus(), 50);
+}
+
+async function showApp() {
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  updateUserDisplay();
+  applyUserTypeFilter();
+  // Load data immediately on app start
+  await loadAllData();
+}
+
+async function loadAllData() {
+  showLoadOverlay(true);
+  try {
+    const res = await apiFetch({ action: 'getAll' });
+    RECORDS = Array.isArray(res.rows) ? res.rows : [];
+  } catch(e) {
+    RECORDS = [];
+    toast('Could not load records: ' + e.message, 'err');
+  } finally {
+    showLoadOverlay(false);
+    renderDashboard();
+    renderRegister();
+    renderReports();
+  }
+}
+
+function showLoadOverlay(show) {
+  document.getElementById('load-overlay').className = show ? 'show' : '';
+}
+
+function refreshAll() {
+  loadAllData();
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────
+async function handleLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  const txt = document.getElementById('login-btn-text');
+  if (!username || !password) {
+    errEl.textContent = 'Please enter username and password';
+    errEl.classList.add('show'); return;
+  }
+  errEl.classList.remove('show');
+  btn.disabled = true;
+  txt.innerHTML = '<span class="spinner"></span> Signing in…';
+  try {
+    const res = await fetch(CFG.url, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'login', username, password })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Login failed');
+    CFG.user = username; CFG.token = data.token || 'authenticated';
+    CFG.typeFilter = data.typeFilter || null;
+    sessionStorage.setItem('dispatch_user', username);
+    sessionStorage.setItem('dispatch_token', CFG.token);
+    sessionStorage.setItem('dispatch_typefilter', CFG.typeFilter || '');
+    showApp();
+  } catch(e) {
+    errEl.textContent = e.message || 'Login failed. Try again.';
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false; txt.textContent = 'Sign In';
+  }
+}
+
+function handleLogout() {
+  if (!confirm('Sign out?')) return;
+  ['dispatch_user','dispatch_token','dispatch_typefilter'].forEach(k => sessionStorage.removeItem(k));
+  CFG.user = CFG.token = CFG.typeFilter = null;
+  RECORDS = [];
+  document.getElementById('login-username').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-error').classList.remove('show');
+  showLogin();
+}
+
+function updateUserDisplay() {
+  if (!CFG.user) return;
+  document.getElementById('user-name').textContent = CFG.user;
+  document.getElementById('user-avatar').textContent = CFG.user.charAt(0).toUpperCase();
+}
+
+function applyUserTypeFilter() {
+  const allowed = getAllowedTypes();
+  const el = document.getElementById('reg-type');
+  if (!el) return;
+  el.style.display = allowed ? 'none' : '';
+}
+
+// ─── API ──────────────────────────────────────────────────────────────
+async function apiFetch(body) {
+  const res = await fetch(CFG.url, { method: 'POST', body: JSON.stringify({ ...body, token: CFG.token }) });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (data.error === 'Unauthorized') { handleLogout(); throw new Error('Session expired. Please login again.'); }
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+// ─── NAV ──────────────────────────────────────────────────────────────
+const PAGES = ['dashboard','register','import','reports'];
+function showPage(id) {
+  PAGES.forEach(p => {
+    const el = document.getElementById('page-' + p);
+    if (el) el.style.display = p === id ? '' : 'none';
+    const nav = document.getElementById('nav-' + p);
+    if (nav) nav.classList.toggle('active', p === id);
+  });
+  if (id === 'register' && !RECORDS.length) loadRegister();
+}
+
+// ─── LOAD REGISTER ────────────────────────────────────────────────────
+async function loadRegister() {
+  const tbody = document.getElementById('register-tbody');
+  tbody.innerHTML = '<tr><td colspan="15" style="padding:30px;text-align:center"><span class="spinner"></span> Loading…</td></tr>';
+  try {
+    const res = await apiFetch({ action: 'getAll' });
+    RECORDS = Array.isArray(res.rows) ? res.rows : [];
+    renderRegister(); renderDashboard(); renderReports();
+  } catch(e) {
+    RECORDS = []; renderRegister();
+    toast('Load failed: ' + e.message, 'err');
+  }
+}
+
+// ─── RENDER REGISTER ──────────────────────────────────────────────────
+function renderRegister() {
+  const search = (document.getElementById('reg-search')?.value || '').toLowerCase();
+  const status = document.getElementById('reg-status')?.value || '';
+  const type   = document.getElementById('reg-type')?.value || '';
+  const tbody  = document.getElementById('register-tbody');
+  const footer = document.getElementById('reg-footer');
+
+  const base = filterByUserType(RECORDS);
+  let rows = base.filter(r => {
+    if (status && (r.status || 'Pending') !== status) return false;
+    if (type   && r.type !== type) return false;
+    if (search && !`${r.invno} ${r.party} ${r.place} ${r.courier} ${r.pod}`.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  if (footer) {
+    footer.style.display = base.length ? '' : 'none';
+    footer.textContent = `Showing ${rows.length} of ${base.length} records`;
+  }
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="15"><div class="empty"><div class="empty-icon">${base.length ? '🔍' : '📋'}</div><div class="empty-text">${base.length ? 'No records match filter.' : 'No records yet.'}</div><div class="empty-hint">${base.length ? 'Try clearing the filter.' : 'Import Excel to begin.'}</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td><span class="id-chip">${r.id||'—'}</span></td>
+      <td class="td-m td-mu">${r.date||'—'}</td>
+      <td><span class="${typeClass(r.type)}">${r.type||'—'}</span></td>
+      <td class="td-m td-b">${r.invno||'—'}</td>
+      <td>${r.party||'—'}</td>
+      <td>${r.place||'—'}</td>
+      <td class="td-m">₹${fmt(r.value)}</td>
+      <td>${r.courier?`<span class="td-b">${r.courier}</span>`:'<span class="td-mu">—</span>'}</td>
+      <td class="td-m">${r.pod||'<span class="td-mu">—</span>'}</td>
+      <td class="td-m" style="text-align:center">${r.boxes||'<span class="td-mu">—</span>'}</td>
+      <td class="td-m td-mu">${r.dispatchDate||'—'}</td>
+      <td class="td-m td-mu">${r.deliveredDate||'—'}</td>
+      <td>${pillHtml(r.status||'Pending')}</td>
+      <td style="font-size:10px;color:var(--muted);line-height:1.6">${r.updatedBy?`<span style="color:var(--text2);font-weight:600">${r.updatedBy}</span><br>${fmtDateTime(r.updatedAt)}`:'—'}</td>
+      <td><button class="btn btn-edit btn-sm" onclick="openEdit('${r.id}')">Edit</button></td>
+    </tr>`).join('');
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────
+function renderDashboard() {
+  const R = filterByUserType(RECORDS);
+  const total = R.length;
+  const totalVal = R.reduce((s,r) => s + (parseFloat(String(r.value||0).replace(/,/g,''))||0), 0);
+  const totalBoxes = R.reduce((s,r) => s + (parseInt(r.boxes)||0), 0);
+  const byS = s => R.filter(r => (r.status||'Pending') === s).length;
+
+  setText('ds-total',      total || '—');
+  setText('ds-value',      total ? '₹'+totalVal.toLocaleString('en-IN') : '—');
+  setText('ds-boxes',      total ? totalBoxes : '—');
+  setText('ds-pending',    total ? byS('Pending') : '—');
+  setText('ds-dispatched', total ? byS('Dispatched') : '—');
+  setText('ds-transit',    total ? byS('In Transit') : '—');
+  setText('ds-delivered',  total ? byS('Delivered') : '—');
+  setText('ds-returned',   total ? byS('Returned') : '—');
+  setText('ds-cancelled',  total ? byS('Cancelled') : '—');
+
+  // Courier chart
+  const cm = {};
+  R.forEach(r => { const c = r.courier?.trim() || '(No Courier)'; cm[c] = (cm[c]||0)+1; });
+  const sorted = Object.entries(cm).sort((a,b) => b[1]-a[1]);
+  const maxC = sorted.length ? sorted[0][1] : 1;
+  document.getElementById('courier-chart').innerHTML = !sorted.length
+    ? '<div class="empty"><div class="empty-icon">🚚</div><div class="empty-text">No courier data</div></div>'
+    : sorted.map(([n,c]) => `
+        <div class="cr-row">
+          <div class="cr-name" title="${n}">${n}</div>
+          <div class="cr-bg"><div class="cr-fill" style="width:${Math.max(4,(c/maxC*100)).toFixed(0)}%"></div></div>
+          <div class="cr-cnt">${c}</div>
+        </div>`).join('');
+
+  // Pending list
+  const pending = R.filter(r => !['Delivered','Cancelled','Returned'].includes(r.status||'Pending'));
+  const pcEl = document.getElementById('pending-count');
+  pcEl.textContent = pending.length;
+  pcEl.className = 'badge' + (pending.length ? ' badge-amber' : '');
+  const pEl = document.getElementById('pending-list');
+  pEl.innerHTML = !pending.length
+    ? '<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">All clear — nothing pending</div></div>'
+    : pending.slice(0,30).map(r => `
+        <div class="pl-row">
+          <span class="pl-id">${r.id}</span>
+          <span class="pl-inv">${r.invno}</span>
+          <span class="pl-place">${r.place}</span>
+          ${pillHtml(r.status||'Pending')}
+        </div>`).join('')
+      + (pending.length > 30 ? `<div style="padding:8px 14px;font-size:11px;color:var(--muted)">+${pending.length-30} more</div>` : '');
+}
+
+// ─── REPORTS ──────────────────────────────────────────────────────────
+function renderReports() {
+  const fs = document.getElementById('rpt-status')?.value || '';
+  const base = filterByUserType(RECORDS);
+  const rows = fs ? base.filter(r => (r.status||'Pending') === fs) : base;
+
+  const cm = {};
+  rows.forEach(r => {
+    const c = r.courier?.trim() || '(No Courier)';
+    if (!cm[c]) cm[c] = {dispatches:0,boxes:0,value:0,pending:0,delivered:0};
+    cm[c].dispatches++;
+    cm[c].boxes   += parseInt(r.boxes)||0;
+    cm[c].value   += parseFloat(String(r.value||0).replace(/,/g,''))||0;
+    if ((r.status||'Pending') !== 'Delivered') cm[c].pending++;
+    if ((r.status||'Pending') === 'Delivered') cm[c].delivered++;
+  });
+
+  const sorted = Object.entries(cm).sort((a,b) => b[1].dispatches-a[1].dispatches);
+  document.getElementById('courier-tbody').innerHTML = !sorted.length
+    ? '<tr><td colspan="6"><div class="empty" style="padding:30px"><div class="empty-text">No data</div></div></td></tr>'
+    : sorted.map(([n,d]) => `<tr>
+        <td class="td-b">${n}</td>
+        <td class="td-m">${d.dispatches}</td>
+        <td class="td-m">${d.boxes}</td>
+        <td class="td-m">₹${d.value.toLocaleString('en-IN')}</td>
+        <td class="td-m" style="color:var(--amber);font-weight:600">${d.pending}</td>
+        <td class="td-m" style="color:var(--green);font-weight:600">${d.delivered}</td>
+      </tr>`).join('');
+
+  const today = new Date();
+  const followup = base.filter(r => !['Delivered','Cancelled'].includes(r.status||'Pending') && r.courier);
+  document.getElementById('followup-tbody').innerHTML = !followup.length
+    ? '<tr><td colspan="9"><div class="empty" style="padding:30px"><div class="empty-text">No pending deliveries</div></div></td></tr>'
+    : followup.map(r => {
+        const dDate = r.dispatchDate ? new Date(r.dispatchDate.split('-').reverse().join('-')) : null;
+        const days = dDate && !isNaN(dDate) ? Math.floor((today-dDate)/86400000) : null;
+        const cls = days===null ? 'days-ok' : days>7 ? 'days-over' : days>3 ? 'days-warn' : 'days-ok';
+        return `<tr>
+          <td><span class="id-chip">${r.id}</span></td>
+          <td class="td-m td-b">${r.invno}</td><td>${r.party}</td><td>${r.place}</td>
+          <td style="font-weight:500">${r.courier||'—'}</td>
+          <td class="td-m">${r.pod||'—'}</td>
+          <td class="td-m td-mu">${r.dispatchDate||'—'}</td>
+          <td class="td-m ${cls}">${days!==null ? days+'d' : '—'}</td>
+          <td>${pillHtml(r.status||'Pending')}</td>
+        </tr>`;
+      }).join('');
+}
+
+// ─── EXCEL IMPORT ─────────────────────────────────────────────────────
+let previewRows = [];
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  if (e.dataTransfer.files[0]) readExcelFile(e.dataTransfer.files[0]);
+}
+function readExcel(input) { if (input?.files?.[0]) readExcelFile(input.files[0]); }
+
+function readExcelFile(file) {
+  document.getElementById('file-name').textContent = '📎 ' + file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+      if (!rows.length) { toast('No data found.', 'err'); return; }
+      previewRows = rows.map(normalizeRow).filter(r => r.isValid);
+      const allowed = getAllowedTypes();
+      if (allowed) previewRows = previewRows.filter(r => allowed.some(t => (r.type||'').toLowerCase()===t.toLowerCase()));
+      if (!previewRows.length) { toast('No valid records. Check column names.', 'err'); return; }
+      renderPreview();
+    } catch(ex) { toast('Could not read file: ' + ex.message, 'err'); }
+  };
+  reader.onerror = () => toast('Failed to read file.', 'err');
+  reader.readAsBinaryString(file);
+}
+
+function normalizeRow(r) {
+  const k = Object.keys(r);
+  const get = (...names) => {
+    for (const n of names) {
+      const norm = n.toUpperCase().replace(/[\s\/\.\-_]/g,'');
+      const found = k.find(kk => kk.toUpperCase().replace(/[\s\/\.\-_]/g,'').includes(norm));
+      if (found !== undefined && r[found] !== '' && r[found] != null) return String(r[found]).trim();
+    }
+    return '';
+  };
+  let dateVal = get('DATE');
+  if (dateVal && !isNaN(dateVal) && dateVal.length <= 6) {
+    dateVal = new Date((parseInt(dateVal)-25569)*86400*1000).toLocaleDateString('en-IN').replace(/\//g,'-');
+  } else if (dateVal && dateVal.includes('T')) dateVal = dateVal.split('T')[0];
+  const n = { date:dateVal, type:get('TYPE'), invno:get('INVNO','SUPPLYID','INV NO','SUPPLY ID','INVOICENO'), party:get('PARTY','STAFFID','STAFF ID','PARTYSTAFF'), place:get('PLACE'), value:get('INVVALUE','INV VALUE','VALUE'), isValid:true };
+  if (!n.date||!n.type||!n.invno||!n.party||!n.place||!n.value) n.isValid = false;
+  return n;
+}
+
+function renderPreview() {
+  const pc = document.getElementById('preview-card');
+  const pp = document.getElementById('preview-placeholder');
+  if (!previewRows.length) { pc.style.display='none'; pp.style.display='flex'; return; }
+  pc.style.display=''; pp.style.display='none';
+  document.getElementById('preview-count').textContent = previewRows.length + ' rows';
+  document.getElementById('preview-tbody').innerHTML = previewRows.map((r,i) => `
+    <tr>
+      <td class="td-mu td-m">${i+1}</td>
+      <td class="td-m td-mu">${r.date||'—'}</td>
+      <td><span class="${typeClass(r.type)}">${r.type||'—'}</span></td>
+      <td class="td-m td-b">${r.invno||'—'}</td>
+      <td>${r.party||'—'}</td><td>${r.place||'—'}</td>
+      <td class="td-m">₹${fmt(r.value)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="removePreviewRow(${i})">✕</button></td>
+    </tr>`).join('');
+}
+function removePreviewRow(i) { previewRows.splice(i,1); renderPreview(); }
+function clearPreview() {
+  previewRows = [];
+  renderPreview();
+  document.getElementById('file-name').textContent = '';
+  const fi = document.getElementById('file-input');
+  if (fi) fi.value = '';
+}
+
+async function importToSheet() {
+  if (!previewRows.length) { toast('Nothing to import.', 'err'); return; }
+  const btn = document.getElementById('import-btn');
+  const txt = document.getElementById('import-btn-text');
+  btn.disabled = true; txt.innerHTML = '<span class="spinner"></span> Importing…';
+  try {
+    const today = new Date().toLocaleDateString('en-IN');
+    const payload = previewRows.map(r => ({ ...r, uploadedDate:today, uploadedBy:CFG.user, status:'Pending', courier:'', pod:'', boxes:'' }));
+    const res = await apiFetch({ action:'importRows', rows:payload });
+    toast(`${res.inserted||previewRows.length} records imported.`, 'ok');
+    clearPreview();
+    await loadAllData();
+    showPage('register');
+  } catch(e) {
+    toast('Import failed: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; txt.textContent = 'Import to Sheets';
+  }
+}
+
+// ─── EDIT MODAL ───────────────────────────────────────────────────────
+let editingId = null;
+
+function openEdit(id) {
+  const r = RECORDS.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+  document.getElementById('mo-id').innerHTML    = `<span class="id-chip">${r.id}</span>`;
+  document.getElementById('mo-date').textContent = r.date||'—';
+  document.getElementById('mo-type').innerHTML  = `<span class="${typeClass(r.type)}">${r.type||'—'}</span>`;
+  document.getElementById('mo-invno').textContent  = r.invno||'—';
+  document.getElementById('mo-party').textContent  = r.party||'—';
+  document.getElementById('mo-place').textContent  = r.place||'—';
+  document.getElementById('mo-value').textContent  = '₹'+fmt(r.value||0);
+  document.getElementById('mo-uploaded').textContent = r.uploadedDate||'—';
+  document.getElementById('mo-courier').value = r.courier||'';
+  document.getElementById('mo-pod').value     = r.pod||'';
+  document.getElementById('mo-boxes').value   = r.boxes||'';
+  document.getElementById('mo-status').value  = r.status||'Pending';
+  document.getElementById('mo-ddate').value   = toInputDate(r.dispatchDate)||'';
+  document.getElementById('mo-dlvdate').value = toInputDate(r.deliveredDate)||'';
+  document.getElementById('edit-modal').style.display = 'flex';
+}
+function closeModal() { document.getElementById('edit-modal').style.display='none'; editingId=null; }
+
+async function saveEdit() {
+  if (!editingId) return;
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving…';
+  const now = new Date();
+  const updatedAt = now.toLocaleDateString('en-IN')+' '+now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  const payload = {
+    action:'updateRow', id:editingId,
+    courier:(document.getElementById('mo-courier').value||'').trim(),
+    pod:(document.getElementById('mo-pod').value||'').trim(),
+    boxes:(document.getElementById('mo-boxes').value||'').trim(),
+    status:document.getElementById('mo-status').value||'Pending',
+    dispatchDate:document.getElementById('mo-ddate').value||'',
+    deliveredDate:document.getElementById('mo-dlvdate').value||'',
+    updatedBy:CFG.user, updatedAt,
+  };
+  try {
+    await apiFetch(payload);
+    const idx = RECORDS.findIndex(x => x.id===editingId);
+    if (idx>-1) Object.assign(RECORDS[idx], { courier:payload.courier, pod:payload.pod, boxes:payload.boxes, status:payload.status, dispatchDate:payload.dispatchDate, deliveredDate:payload.deliveredDate, updatedBy:payload.updatedBy, updatedAt:payload.updatedAt });
+    toast('Updated successfully.', 'ok');
+    closeModal(); renderRegister(); renderDashboard(); renderReports();
+  } catch(e) {
+    toast('Save failed: '+e.message, 'err');
+  } finally {
+    btn.disabled=false; btn.innerHTML='Save Changes';
+  }
+}
+
+// ─── USER TYPE FILTER ─────────────────────────────────────────────────
+function getAllowedTypes() {
+  const tf = (CFG.typeFilter||'').trim().toLowerCase();
+  if (tf==='sample') return ['Sample','Gift'];
+  if (tf==='depot')  return ['Sale'];
+  const u = (CFG.user||'').toLowerCase().trim();
+  if (u==='sample') return ['Sample','Gift'];
+  if (u==='depot')  return ['Sale'];
+  return null;
+}
+function filterByUserType(records) {
+  const allowed = getAllowedTypes();
+  if (!allowed) return records;
+  return records.filter(r => allowed.some(t => (r.type||'').toLowerCase()===t.toLowerCase()));
+}
+
+// ─── DATE HELPERS ─────────────────────────────────────────────────────
+function fmtDateTime(val) {
+  if (!val) return '—';
+  const s = String(val).trim();
+  if (s.includes('T')||s.includes('Z')) {
+    try {
+      const d = new Date(s);
+      if (isNaN(d.getTime())) return s;
+      const dd=String(d.getDate()).padStart(2,'0'), mm=String(d.getMonth()+1).padStart(2,'0'), yyyy=d.getFullYear();
+      let h=d.getHours(); const min=String(d.getMinutes()).padStart(2,'0'), ampm=h>=12?'PM':'AM';
+      h=h%12||12;
+      return `${dd}-${mm}-${yyyy} ${String(h).padStart(2,'0')}:${min} ${ampm}`;
+    } catch(e) { return s; }
+  }
+  return s;
+}
+function toInputDate(d) {
+  if (!d) return ''; d=String(d).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  const m = d.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
+  if (m) { const y=m[3].length===2?'20'+m[3]:m[3]; return `${y}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`; }
+  try { const dt=new Date(d); if (!isNaN(dt.getTime())) return dt.toISOString().split('T')[0]; } catch(e) {}
+  return '';
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────
+function typeClass(t) { const v=(t||'').toLowerCase(); return v==='sale'?'t-sale':v==='sample'?'t-sample':'t-other'; }
+function pillHtml(s) {
+  const m={Pending:'p-pending',Dispatched:'p-dispatched',Delivered:'p-delivered',Returned:'p-returned','In Transit':'p-transit',Cancelled:'p-cancelled'};
+  return `<span class="pill ${m[s]||'p-pending'}">${s||'Pending'}</span>`;
+}
+function fmt(v) { const n=parseFloat(String(v||0).replace(/,/g,'')); return isNaN(n)?(v||'—'):n.toLocaleString('en-IN'); }
+function setText(id,val) { const el=document.getElementById(id); if(el) el.textContent=val; }
+function toast(msg,type='info') {
+  const el=document.createElement('div');
+  el.className='toast-item toast-'+type;
+  el.innerHTML=`<span>${{ok:'✓',err:'✕',info:'ℹ'}[type]||'ℹ'}</span><span>${msg}</span>`;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(()=>el.remove(),3500);
+}
+
+loadConfig();
+</script>
+</body>
+</html>
