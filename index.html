@@ -853,6 +853,7 @@ async function showApp() {
   document.getElementById('app').style.display = 'flex';
   updateUserDisplay();
   applyUserTypeFilter();
+  showPage('dashboard');
   // Load data immediately on app start
   await loadAllData();
 }
@@ -903,7 +904,8 @@ async function handleLogin() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'Login failed');
-    CFG.user = username; CFG.token = data.token || 'authenticated';
+    if (!data.token) throw new Error('Server did not return a session token.');
+    CFG.user = username; CFG.token = data.token;
     CFG.typeFilter = data.typeFilter || null;
     sessionStorage.setItem('dispatch_user', username);
     sessionStorage.setItem('dispatch_token', CFG.token);
@@ -917,11 +919,11 @@ async function handleLogin() {
   }
 }
 
-function handleLogout() {
-  if (!confirm('Sign out?')) return;
+function handleLogout(force) {
+  if (!force && !confirm('Sign out?')) return;
   ['dispatch_user','dispatch_token','dispatch_typefilter'].forEach(k => sessionStorage.removeItem(k));
   CFG.user = CFG.token = CFG.typeFilter = null;
-  RECORDS = [];
+  RECORDS = []; selectedIds.clear(); clearPreview();
   document.getElementById('login-username').value = '';
   document.getElementById('login-password').value = '';
   document.getElementById('login-error').classList.remove('show');
@@ -947,7 +949,7 @@ async function apiFetch(body) {
   const res = await fetch(CFG.url, { method: 'POST', body: JSON.stringify({ ...body, token: CFG.token }) });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const data = await res.json();
-  if (data.error === 'Unauthorized') { handleLogout(); throw new Error('Session expired. Please login again.'); }
+  if (data.error === 'Unauthorized') { handleLogout(true); throw new Error('Session expired. Please login again.'); }
   if (data.error) throw new Error(data.error);
   return data;
 }
@@ -989,8 +991,8 @@ function renderRegister() {
   const base = filterByUserType(RECORDS);
   let rows = base.filter(r => {
     if (status && (r.status || 'Pending') !== status) return false;
-    if (type   && r.type !== type) return false;
-    if (search && !`${r.invno} ${r.party} ${r.place} ${r.courier} ${r.pod} ${r.purpose||''} ${r.details||''}`.toLowerCase().includes(search)) return false;
+    if (type   && (r.type||'').toLowerCase() !== type.toLowerCase()) return false;
+    if (search && !`${r.id} ${r.invno} ${r.party} ${r.place} ${r.courier} ${r.pod} ${r.purpose||''} ${r.details||''}`.toLowerCase().includes(search)) return false;
     return true;
   });
 
@@ -1004,26 +1006,29 @@ function renderRegister() {
     tbody.innerHTML = `<tr><td colspan="17"><div class="empty"><div class="empty-icon">${base.length ? '🔍' : '📋'}</div><div class="empty-text">${base.length ? 'No records match filter.' : 'No records yet.'}</div><div class="empty-hint">${base.length ? 'Try clearing the filter.' : 'Import Excel to begin.'}</div></div></td></tr>`;
     return;
   }
-  tbody.innerHTML = rows.map(r => `
-    <tr class="${selectedIds.has(r.id)?'row-sel':''}">
-      <td><input type="checkbox" class="chk" ${selectedIds.has(r.id)?'checked':''} onchange="toggleSel('${r.id}',this.checked)"/></td>
-      <td><span class="id-chip">${r.id||'—'}</span></td>
-      <td class="td-m td-mu">${r.date||'—'}</td>
-      <td><span class="${typeClass(r.type)}">${r.type||'—'}</span></td>
-      <td class="td-m td-b">${r.invno||'—'}</td>
-      <td>${r.party||'—'}</td>
-      <td>${r.place||'—'}</td>
-      <td style="max-width:200px;line-height:1.5">${(r.purpose||r.details)?`<span class="td-b">${r.purpose||''}</span>${r.details?`<br><span class="td-mu" style="font-size:10px">${r.details}</span>`:''}`:'<span class="td-mu">—</span>'}</td>
-      <td class="td-m">₹${fmt(r.value)}</td>
-      <td>${r.courier?`<span class="td-b">${r.courier}</span>`:'<span class="td-mu">—</span>'}</td>
+  tbody.innerHTML = rows.map(r => {
+    const sel = selectedIds.has(r.id), id = esc(r.id);
+    return `
+    <tr class="${sel?'row-sel':''}">
+      <td><input type="checkbox" class="chk" ${sel?'checked':''} data-id="${id}" onchange="toggleSel(this.dataset.id,this.checked,this)"/></td>
+      <td><span class="id-chip">${id||'—'}</span></td>
+      <td class="td-m td-mu">${esc(r.date)||'—'}</td>
+      <td><span class="${typeClass(r.type)}">${esc(r.type)||'—'}</span></td>
+      <td class="td-m td-b">${esc(r.invno)||'—'}</td>
+      <td>${esc(r.party)||'—'}</td>
+      <td>${esc(r.place)||'—'}</td>
+      <td style="max-width:200px;line-height:1.5">${(r.purpose||r.details)?`<span class="td-b">${esc(r.purpose)}</span>${r.details?`<br><span class="td-mu" style="font-size:10px">${esc(r.details)}</span>`:''}`:'<span class="td-mu">—</span>'}</td>
+      <td class="td-m">₹${esc(fmt(r.value))}</td>
+      <td>${r.courier?`<span class="td-b">${esc(r.courier)}</span>`:'<span class="td-mu">—</span>'}</td>
       <td class="td-m">${podLink(r)}</td>
-      <td class="td-m" style="text-align:center">${r.boxes||'<span class="td-mu">—</span>'}</td>
-      <td class="td-m td-mu">${r.dispatchDate||'—'}</td>
-      <td class="td-m td-mu">${r.deliveredDate||'—'}</td>
+      <td class="td-m" style="text-align:center">${esc(r.boxes)||'<span class="td-mu">—</span>'}</td>
+      <td class="td-m td-mu">${esc(r.dispatchDate)||'—'}</td>
+      <td class="td-m td-mu">${esc(r.deliveredDate)||'—'}</td>
       <td>${pillHtml(r.status||'Pending')}</td>
-      <td style="font-size:10px;color:var(--muted);line-height:1.6">${r.updatedBy?`<span style="color:var(--text2);font-weight:600">${r.updatedBy}</span><br>${fmtDateTime(r.updatedAt)}`:'—'}</td>
-      <td style="white-space:nowrap"><button class="btn btn-edit btn-sm" onclick="openEdit('${r.id}')">Edit</button> <button class="btn btn-ghost btn-sm" onclick="openHistory('${r.id}')" title="History">🕘</button></td>
-    </tr>`).join('');
+      <td style="font-size:10px;color:var(--muted);line-height:1.6">${r.updatedBy?`<span style="color:var(--text2);font-weight:600">${esc(r.updatedBy)}</span><br>${esc(fmtDateTime(r.updatedAt))}`:'—'}</td>
+      <td style="white-space:nowrap"><button class="btn btn-edit btn-sm" data-id="${id}" onclick="openEdit(this.dataset.id)">Edit</button> <button class="btn btn-ghost btn-sm" data-id="${id}" onclick="openHistory(this.dataset.id)" title="History">🕘</button></td>
+    </tr>`;
+  }).join('');
   syncSelectionUI();
 }
 
@@ -1031,7 +1036,7 @@ function renderRegister() {
 function renderDashboard() {
   const R = filterByUserType(RECORDS);
   const total = R.length;
-  const totalVal = R.reduce((s,r) => s + (parseFloat(String(r.value||0).replace(/,/g,''))||0), 0);
+  const totalVal = R.reduce((s,r) => s + numVal(r.value), 0);
   const totalBoxes = R.reduce((s,r) => s + (parseInt(r.boxes)||0), 0);
   const byS = s => R.filter(r => (r.status||'Pending') === s).length;
 
@@ -1054,7 +1059,7 @@ function renderDashboard() {
     ? '<div class="empty"><div class="empty-icon">🚚</div><div class="empty-text">No courier data</div></div>'
     : sorted.map(([n,c]) => `
         <div class="cr-row">
-          <div class="cr-name" title="${n}">${n}</div>
+          <div class="cr-name" title="${esc(n)}">${esc(n)}</div>
           <div class="cr-bg"><div class="cr-fill" style="width:${Math.max(4,(c/maxC*100)).toFixed(0)}%"></div></div>
           <div class="cr-cnt">${c}</div>
         </div>`).join('');
@@ -1069,9 +1074,9 @@ function renderDashboard() {
     ? '<div class="empty"><div class="empty-icon">✅</div><div class="empty-text">All clear — nothing pending</div></div>'
     : pending.slice(0,30).map(r => `
         <div class="pl-row">
-          <span class="pl-id">${r.id}</span>
-          <span class="pl-inv">${r.invno}</span>
-          <span class="pl-place">${r.place}</span>
+          <span class="pl-id">${esc(r.id)}</span>
+          <span class="pl-inv">${esc(r.invno)}</span>
+          <span class="pl-place">${esc(r.place)}</span>
           ${pillHtml(r.status||'Pending')}
         </div>`).join('')
       + (pending.length > 30 ? `<div style="padding:8px 14px;font-size:11px;color:var(--muted)">+${pending.length-30} more</div>` : '');
@@ -1086,7 +1091,7 @@ function parseDMY(str) {
   const d = new Date(str);
   return isNaN(d) ? null : d;
 }
-function numVal(v) { return parseFloat(String(v||0).replace(/,/g,'')) || 0; }
+function numVal(v) { return parseFloat(String(v||0).replace(/[^0-9.\-]/g,'')) || 0; }
 function inr(n) { return '₹' + Number(n||0).toLocaleString('en-IN'); }
 function daysSince(dateStr) {
   const d = parseDMY(dateStr);
@@ -1179,7 +1184,7 @@ function renderReports() {
   if (cs) {
     const cur = cs.value;
     const couriers = [...new Set(filterByUserType(RECORDS).map(r => (r.courier||'').trim()).filter(Boolean))].sort();
-    cs.innerHTML = '<option value="">All Couriers</option>' + couriers.map(c => `<option${c===cur?' selected':''}>${c}</option>`).join('');
+    cs.innerHTML = '<option value="">All Couriers</option>' + couriers.map(c => `<option value="${esc(c)}"${c===cur?' selected':''}>${esc(c)}</option>`).join('');
   }
   const typeSel = document.getElementById('rpt-type');
   if (typeSel) typeSel.style.display = getAllowedTypes() ? 'none' : '';
@@ -1199,7 +1204,7 @@ function renderReports() {
   // Courier
   document.getElementById('courier-tbody').innerHTML = !D.courier.length ? emptyRow(6,'No data') :
     D.courier.map(([n,d]) => `<tr>
-      <td class="td-b">${n}</td><td class="td-m">${d.n}</td><td class="td-m">${d.boxes}</td>
+      <td class="td-b">${esc(n)}</td><td class="td-m">${d.n}</td><td class="td-m">${d.boxes}</td>
       <td class="td-m">${inr(d.value)}</td>
       <td class="td-m" style="color:var(--amber);font-weight:600">${d.pending}</td>
       <td class="td-m" style="color:var(--green);font-weight:600">${d.delivered}</td></tr>`).join('');
@@ -1207,7 +1212,7 @@ function renderReports() {
   // Type
   document.getElementById('type-tbody').innerHTML = !D.type.length ? emptyRow(5,'No data') :
     D.type.map(([n,d]) => `<tr>
-      <td><span class="${typeClass(n)}">${n}</span></td><td class="td-m">${d.n}</td>
+      <td><span class="${typeClass(n)}">${esc(n)}</span></td><td class="td-m">${d.n}</td>
       <td class="td-m">${inr(d.value)}</td>
       <td class="td-m" style="color:var(--amber);font-weight:600">${d.pending}</td>
       <td class="td-m" style="color:var(--green);font-weight:600">${d.delivered}</td></tr>`).join('');
@@ -1224,7 +1229,7 @@ function renderReports() {
   if (pc) pc.style.display = (allowed && !allowed.some(t => t.toLowerCase()!=='sale')) ? 'none' : '';
   document.getElementById('purpose-tbody').innerHTML = !D.purpose.length ? emptyRow(7,'No Sample / Gift records with purpose') :
     D.purpose.map(d => `<tr>
-      <td class="td-b">${d.label}</td><td class="td-m">${d.n}</td>
+      <td class="td-b">${esc(d.label)}</td><td class="td-m">${d.n}</td>
       <td class="td-m">${d.sample}</td><td class="td-m">${d.gift}</td>
       <td class="td-m">${inr(d.value)}</td>
       <td class="td-m" style="color:var(--amber);font-weight:600">${d.pending}</td>
@@ -1233,7 +1238,7 @@ function renderReports() {
   // Place (top 15 on screen; export has all)
   document.getElementById('place-tbody').innerHTML = !D.place.length ? emptyRow(5,'No data') :
     D.place.slice(0,15).map(([n,d]) => `<tr>
-      <td class="td-b">${n}</td><td class="td-m">${d.n}</td><td class="td-m">${d.boxes}</td>
+      <td class="td-b">${esc(n)}</td><td class="td-m">${d.n}</td><td class="td-m">${d.boxes}</td>
       <td class="td-m">${inr(d.value)}</td>
       <td class="td-m" style="color:var(--amber);font-weight:600">${d.pending}</td></tr>`).join('');
 
@@ -1242,41 +1247,41 @@ function renderReports() {
     D.followup.map(({r,days}) => {
       const cls = days===null ? 'days-ok' : days>7 ? 'days-over' : days>3 ? 'days-warn' : 'days-ok';
       return `<tr>
-        <td><span class="id-chip">${r.id}</span></td>
-        <td class="td-m td-b">${r.invno}</td><td>${r.party}</td><td>${r.place}</td>
-        <td style="font-weight:500">${r.courier||'—'}</td>
+        <td><span class="id-chip">${esc(r.id)}</span></td>
+        <td class="td-m td-b">${esc(r.invno)}</td><td>${esc(r.party)}</td><td>${esc(r.place)}</td>
+        <td style="font-weight:500">${esc(r.courier)||'—'}</td>
         <td class="td-m">${podLink(r)}</td>
-        <td class="td-m td-mu">${r.dispatchDate||'—'}</td>
+        <td class="td-m td-mu">${esc(r.dispatchDate)||'—'}</td>
         <td class="td-m ${cls}">${days!==null ? days+'d' : '—'}</td>
         <td>${pillHtml(r.status||'Pending')}</td></tr>`;
     }).join('');
 }
 
 // ─── REPORT EXCEL EXPORT ──────────────────────────────────────────────
-function mkSheet(aoa, widths) {
+function mkSheet(aoa, widths, hasTotal) {
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   ws['!cols'] = widths.map(w => ({ wch: w }));
-  if (aoa.length) ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:aoa.length-1, c:aoa[0].length-1} }) };
+  if (aoa.length) ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:Math.max(0, aoa.length-1-(hasTotal?1:0)), c:aoa[0].length-1} }) };
   return ws;
 }
 function sheetRecords(D) {
   const hdr = ['ID','Date','Type','Inv No','Party / Staff','Place','Purpose','Details','Invoice Value','Courier','POD','Boxes','Status','Dispatch Date','Delivered Date','Uploaded Date','Uploaded By','Updated By','Updated At'];
   const body = D.rows.map(r => [r.id, r.date, r.type, r.invno, r.party, r.place, r.purpose||'', r.details||'', numVal(r.value), r.courier||'', r.pod||'', parseInt(r.boxes)||0, r.status||'Pending', r.dispatchDate||'', r.deliveredDate||'', r.uploadedDate||'', r.uploadedBy||'', r.updatedBy||'', r.updatedAt ? fmtDateTime(r.updatedAt) : '']);
   const total = ['TOTAL','','','','','','','', body.reduce((a,x)=>a+x[8],0), '','', body.reduce((a,x)=>a+x[11],0), '','','','','','',''];
-  return mkSheet([hdr, ...body, total], [10,12,9,16,22,16,18,28,14,14,16,8,12,13,13,13,12,12,20]);
+  return mkSheet([hdr, ...body, total], [10,12,9,16,22,16,18,28,14,14,16,8,12,13,13,13,12,12,20], true);
 }
 function sheetGroup(label, entries, withBoxes, labelFn) {
   const hdr = [label, 'Records', ...(withBoxes ? ['Boxes'] : []), 'Invoice Value', 'Pending', 'Delivered'];
   const body = entries.map(([k,d]) => [labelFn ? labelFn(k) : k, d.n, ...(withBoxes ? [d.boxes] : []), d.value, d.pending, d.delivered]);
   const sum = i => body.reduce((a,x) => a + (x[i]||0), 0);
   const total = ['TOTAL', sum(1), ...(withBoxes ? [sum(2)] : []), sum(withBoxes?3:2), sum(withBoxes?4:3), sum(withBoxes?5:4)];
-  return mkSheet([hdr, ...body, total], [24,10,...(withBoxes?[8]:[]),16,10,10]);
+  return mkSheet([hdr, ...body, total], [24,10,...(withBoxes?[8]:[]),16,10,10], true);
 }
 function sheetPurpose(D) {
   const hdr = ['Purpose','Records','Sample','Gift','Invoice Value','Pending','Delivered'];
   const body = D.purpose.map(d => [d.label, d.n, d.sample, d.gift, d.value, d.pending, d.delivered]);
   const sum = i => body.reduce((a,x) => a + (x[i]||0), 0);
-  return mkSheet([hdr, ...body, ['TOTAL', sum(1), sum(2), sum(3), sum(4), sum(5), sum(6)]], [26,10,9,9,16,10,10]);
+  return mkSheet([hdr, ...body, ['TOTAL', sum(1), sum(2), sum(3), sum(4), sum(5), sum(6)]], [26,10,9,9,16,10,10], true);
 }
 function sheetFollowup(D) {
   const hdr = ['ID','Inv No','Type','Party / Staff','Place','Courier','POD','Dispatch Date','Days Pending','Status','Invoice Value'];
@@ -1425,12 +1430,31 @@ function readExcelFile(file) {
       const allowed = getAllowedTypes();
       if (allowed) previewRows = previewRows.filter(r => allowed.some(t => (r.type||'').toLowerCase()===t.toLowerCase()));
       if (!previewRows.length) { toast('No valid records. Check column names / TYPE.', 'err'); return; }
-      if (skipped) toast(skipped + ' row(s) skipped (missing fields or wrong TYPE).', 'info');
+      if (skipped) toast(skipped + ' row(s) skipped (missing fields, invalid date or wrong TYPE).', 'info');
       renderPreview();
     } catch(ex) { toast('Could not read file: ' + ex.message, 'err'); }
   };
   reader.onerror = () => toast('Failed to read file.', 'err');
   reader.readAsBinaryString(file);
+}
+
+// Returns a zero-padded DD-MM-YYYY string for a real calendar date, otherwise ''.
+function normDMY(str) {
+  str = String(str||'').trim();
+  let y, mo, d, m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) { y=+m[1]; mo=+m[2]; d=+m[3]; }
+  else {
+    m = str.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2,4})$/);
+    if (!m) return '';
+    d=+m[1]; mo=+m[2]; y=+m[3]; if (m[3].length===2) y+=2000;
+  }
+  const t = new Date(y, mo-1, d);
+  if (t.getFullYear()!==y || t.getMonth()!==mo-1 || t.getDate()!==d) return '';
+  return `${String(d).padStart(2,'0')}-${String(mo).padStart(2,'0')}-${y}`;
+}
+function todayDMY() {
+  const n = new Date();
+  return `${String(n.getDate()).padStart(2,'0')}-${String(n.getMonth()+1).padStart(2,'0')}-${n.getFullYear()}`;
 }
 
 function normalizeRow(r, mode) {
@@ -1444,10 +1468,15 @@ function normalizeRow(r, mode) {
     return '';
   };
   let dateVal = get('DATE');
-  if (dateVal && !isNaN(dateVal) && dateVal.length <= 6) {
-    dateVal = new Date((parseInt(dateVal)-25569)*86400*1000).toLocaleDateString('en-IN').replace(/\//g,'-');
-  } else if (dateVal && dateVal.includes('T')) dateVal = dateVal.split('T')[0];
-  const n = { date:dateVal, type:get('TYPE'), invno:get('INVNO','SUPPLYID','INV NO','SUPPLY ID','INVOICENO'), party:get('PARTY','STAFFID','STAFF ID','PARTYSTAFF'), place:get('PLACE'), value:get('INVVALUE','INV VALUE','VALUE'), purpose:'', details:'', isValid:true };
+  if (/^\d+(\.\d+)?$/.test(dateVal) && parseFloat(dateVal) > 1 && parseFloat(dateVal) < 100000) {
+    // Excel serial number → DD-MM-YYYY (UTC getters so the local time zone can't shift the day)
+    const d = new Date(Math.floor(parseFloat(dateVal) - 25569) * 86400000);
+    dateVal = `${String(d.getUTCDate()).padStart(2,'0')}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${d.getUTCFullYear()}`;
+  } else {
+    dateVal = normDMY(dateVal.split('T')[0].split(' ')[0]);
+  }
+  const rawType = get('TYPE');
+  const n = { date:dateVal, type:({sale:'Sale',sample:'Sample',gift:'Gift'})[rawType.toLowerCase()] || rawType, invno:get('INVNO','SUPPLYID','INV NO','SUPPLY ID','INVOICENO'), party:get('PARTY','STAFFID','STAFF ID','PARTYSTAFF'), place:get('PLACE'), value:get('INVVALUE','INV VALUE','VALUE'), purpose:'', details:'', isValid:true };
   if (mode==='sample') { n.purpose = get('PURPOSE'); n.details = get('DETAILS','DETAIL'); }
   if (!n.date||!n.type||!n.invno||!n.party||!n.place||!n.value) n.isValid = false;
   if (mode==='sample' && !n.purpose) n.isValid = false;
@@ -1465,12 +1494,12 @@ function renderPreview() {
   document.getElementById('preview-tbody').innerHTML = previewRows.map((r,i) => `
     <tr>
       <td class="td-mu td-m">${i+1}</td>
-      <td class="td-m td-mu">${r.date||'—'}</td>
-      <td><span class="${typeClass(r.type)}">${r.type||'—'}</span></td>
-      <td class="td-m td-b">${r.invno||'—'}</td>
-      <td>${r.party||'—'}</td><td>${r.place||'—'}</td>
-      ${sm ? `<td>${r.purpose||'—'}</td><td>${r.details||'—'}</td>` : ''}
-      <td class="td-m">₹${fmt(r.value)}</td>
+      <td class="td-m td-mu">${esc(r.date)||'—'}</td>
+      <td><span class="${typeClass(r.type)}">${esc(r.type)||'—'}</span></td>
+      <td class="td-m td-b">${esc(r.invno)||'—'}</td>
+      <td>${esc(r.party)||'—'}</td><td>${esc(r.place)||'—'}</td>
+      ${sm ? `<td>${esc(r.purpose)||'—'}</td><td>${esc(r.details)||'—'}</td>` : ''}
+      <td class="td-m">₹${esc(fmt(r.value))}</td>
       <td><button class="btn btn-danger btn-sm" onclick="removePreviewRow(${i})">✕</button></td>
     </tr>`).join('');
 }
@@ -1485,11 +1514,15 @@ function clearPreview() {
 
 async function importToSheet() {
   if (!previewRows.length) { toast('Nothing to import.', 'err'); return; }
+  const keyOf = r => `${(r.type||'').toLowerCase()}|${String(r.invno||'').trim().toLowerCase()}`;
+  const existing = new Set(RECORDS.map(keyOf));
+  const dupes = previewRows.filter(r => existing.has(keyOf(r))).length;
+  if (dupes && !confirm(`${dupes} of ${previewRows.length} row(s) have an Inv No that already exists. Import them again anyway?`)) return;
   const btn = document.getElementById('import-btn');
   const txt = document.getElementById('import-btn-text');
   btn.disabled = true; txt.innerHTML = '<span class="spinner"></span> Importing…';
   try {
-    const today = new Date().toLocaleDateString('en-IN');
+    const today = todayDMY();
     const payload = previewRows.map(r => ({ ...r, uploadedDate:today, uploadedBy:CFG.user, status:'Pending', courier:'', pod:'', boxes:'' }));
     const res = await apiFetch({ action:'importRows', rows:payload });
     toast(`${res.inserted||previewRows.length} records imported.`, 'ok');
@@ -1510,9 +1543,9 @@ function openEdit(id) {
   const r = RECORDS.find(x => x.id === id);
   if (!r) return;
   editingId = id;
-  document.getElementById('mo-id').innerHTML    = `<span class="id-chip">${r.id}</span>`;
+  document.getElementById('mo-id').innerHTML    = `<span class="id-chip">${esc(r.id)}</span>`;
   document.getElementById('mo-date').textContent = r.date||'—';
-  document.getElementById('mo-type').innerHTML  = `<span class="${typeClass(r.type)}">${r.type||'—'}</span>`;
+  document.getElementById('mo-type').innerHTML  = `<span class="${typeClass(r.type)}">${esc(r.type)||'—'}</span>`;
   document.getElementById('mo-invno').textContent  = r.invno||'—';
   document.getElementById('mo-party').textContent  = r.party||'—';
   document.getElementById('mo-place').textContent  = r.place||'—';
@@ -1537,7 +1570,7 @@ async function saveEdit() {
   const btn = document.getElementById('save-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving…';
   const now = new Date();
-  const updatedAt = now.toLocaleDateString('en-IN')+' '+now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  const updatedAt = now.toISOString();
   const payload = {
     action:'updateRow', id:editingId,
     courier:(document.getElementById('mo-courier').value||'').trim(),
@@ -1551,7 +1584,7 @@ async function saveEdit() {
   try {
     await apiFetch(payload);
     const idx = RECORDS.findIndex(x => x.id===editingId);
-    if (idx>-1) Object.assign(RECORDS[idx], { courier:payload.courier, pod:payload.pod, boxes:payload.boxes, status:payload.status, dispatchDate:payload.dispatchDate, deliveredDate:payload.deliveredDate, updatedBy:payload.updatedBy, updatedAt:payload.updatedAt });
+    if (idx>-1) Object.assign(RECORDS[idx], { courier:payload.courier, pod:payload.pod, boxes:payload.boxes, status:payload.status, dispatchDate:ymdToDmy(payload.dispatchDate), deliveredDate:ymdToDmy(payload.deliveredDate), updatedBy:payload.updatedBy, updatedAt:payload.updatedAt });
     toast('Updated successfully.', 'ok');
     closeModal(); renderRegister(); renderDashboard(); renderReports();
   } catch(e) {
@@ -1575,6 +1608,7 @@ const COURIER_TRACK = [
   { match:['india post','speed post','indiapost'], url:'https://www.indiapost.gov.in/' },
   { match:['professional','tpc'],   url:'https://www.tpcindia.com/' }
 ];
+function esc(v) { return escAttr(v); }
 function escAttr(v) { return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function podLink(r) {
   const pod = (r.pod||'').trim();
@@ -1602,9 +1636,11 @@ async function trackPod(el) {
 let selectedIds = new Set();
 let VISIBLE_IDS = [];
 
-function toggleSel(id, on) {
+function toggleSel(id, on, el) {
   if (on) selectedIds.add(id); else selectedIds.delete(id);
-  renderRegister();
+  const tr = el && el.closest ? el.closest('tr') : null;
+  if (tr) { tr.classList.toggle('row-sel', !!on); syncSelectionUI(); }   // no full re-render per click
+  else renderRegister();
 }
 function toggleSelAll(cb) {
   if (cb.checked) VISIBLE_IDS.forEach(id => selectedIds.add(id));
@@ -1828,14 +1864,16 @@ function toInputDate(d) {
 function typeClass(t) { const v=(t||'').toLowerCase(); return v==='sale'?'t-sale':v==='sample'?'t-sample':'t-other'; }
 function pillHtml(s) {
   const m={Pending:'p-pending',Dispatched:'p-dispatched',Delivered:'p-delivered',Returned:'p-returned','In Transit':'p-transit',Cancelled:'p-cancelled'};
-  return `<span class="pill ${m[s]||'p-pending'}">${s||'Pending'}</span>`;
+  return `<span class="pill ${m[s]||'p-pending'}">${esc(s||'Pending')}</span>`;
 }
-function fmt(v) { const n=parseFloat(String(v||0).replace(/,/g,'')); return isNaN(n)?(v||'—'):n.toLocaleString('en-IN'); }
+function fmt(v) { const n=parseFloat(String(v||0).replace(/[^0-9.\-]/g,'')); return isNaN(n)?(v||'—'):n.toLocaleString('en-IN'); }
 function setText(id,val) { const el=document.getElementById(id); if(el) el.textContent=val; }
 function toast(msg,type='info') {
   const el=document.createElement('div');
   el.className='toast-item toast-'+type;
-  el.innerHTML=`<span>${{ok:'✓',err:'✕',info:'ℹ'}[type]||'ℹ'}</span><span>${msg}</span>`;
+  const ic=document.createElement('span'); ic.textContent={ok:'✓',err:'✕',info:'ℹ'}[type]||'ℹ';
+  const tx=document.createElement('span'); tx.textContent=msg;     // textContent: server messages can't inject HTML
+  el.append(ic,tx);
   document.getElementById('toast').appendChild(el);
   setTimeout(()=>el.remove(),3500);
 }
