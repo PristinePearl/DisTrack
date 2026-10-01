@@ -6,6 +6,8 @@
 <title>Dispatch Tracker — Pristine Pearl Pharma</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
 :root {
   --bg:#f1f5f9; --surface:#fff; --surface2:#f8fafc; --border:#e2e8f0; --border2:#cbd5e1;
@@ -178,6 +180,29 @@ tbody td{padding:9px 12px;font-size:12px;color:var(--text2);white-space:nowrap}
 /* ── TYPE CHIPS ── */
 .t-sale{font-size:10px;font-weight:700;color:var(--cyan);background:var(--cyan-lt);border:1px solid var(--cyan-md);padding:2px 8px;border-radius:5px}
 .t-sample{font-size:10px;font-weight:700;color:var(--purple);background:var(--purple-lt);border:1px solid #ddd6fe;padding:2px 8px;border-radius:5px}
+.imp-tabs{display:flex;gap:8px;margin-bottom:16px}
+.imp-tab{padding:8px 16px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+.imp-tab:hover{border-color:var(--border2)}
+.imp-tab.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.pod-link{color:var(--blue);font-weight:600;text-decoration:none;border-bottom:1px dashed var(--blue-md);cursor:pointer}
+.pod-link:hover{color:#1d4ed8;border-bottom-style:solid}
+.bulk-bar{display:none;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;background:var(--blue-lt);border-bottom:1px solid var(--blue-md)}
+.bulk-bar .bb-count{font-weight:700;color:var(--blue);font-size:12px;margin-right:6px}
+tr.row-sel td{background:var(--blue-lt)}
+.chk{width:15px;height:15px;cursor:pointer;accent-color:var(--blue)}
+.tl{position:relative;padding-left:22px;margin:4px 0}
+.tl::before{content:'';position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.tl-item{position:relative;margin-bottom:16px}
+.tl-dot{position:absolute;left:-21px;top:3px;width:12px;height:12px;border-radius:50%;background:var(--blue);border:2px solid #fff;box-shadow:0 0 0 1px var(--blue-md)}
+.tl-dot.imp{background:var(--green);box-shadow:0 0 0 1px var(--green-md)}
+.tl-dot.bulk{background:var(--purple);box-shadow:0 0 0 1px #ddd6fe}
+.tl-head{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px}
+.tl-act{font-weight:700;color:var(--text)}
+.tl-time{color:var(--muted);font-size:11px}
+.tl-by{color:var(--text2);font-size:11px;margin-top:1px}
+.tl-chg{margin-top:6px;display:flex;flex-direction:column;gap:3px}
+.tl-chg div{font-size:11px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text2)}
+.tl-chg b{color:var(--text)}
 .t-other{font-size:10px;font-weight:700;color:var(--muted);background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:5px}
 
 /* ── ID CHIP ── */
@@ -448,19 +473,25 @@ tbody td{padding:9px 12px;font-size:12px;color:var(--text2);white-space:nowrap}
               <button class="btn btn-ghost btn-sm" onclick="loadRegister()">↻ Refresh</button>
             </div>
           </div>
+          <div class="bulk-bar" id="bulk-bar">
+            <span class="bb-count" id="bulk-count">0 selected</span>
+            <button class="btn btn-primary btn-sm" onclick="openBulk()">✏️ Bulk Update</button>
+            <button class="btn btn-ghost btn-sm" onclick="manifestSelected()">🖨 Manifest PDF</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearSelection()">✕ Clear</button>
+          </div>
           <div class="tbl-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>ID</th><th>Date</th><th>Type</th><th>Inv No</th>
-                  <th>Party / Staff</th><th>Place</th><th>Value</th>
+                  <th style="width:30px"><input type="checkbox" class="chk" id="sel-all" onchange="toggleSelAll(this)" title="Select all visible"/></th><th>ID</th><th>Date</th><th>Type</th><th>Inv No</th>
+                  <th>Party / Staff</th><th>Place</th><th>Purpose / Details</th><th>Value</th>
                   <th>Courier</th><th>POD</th><th>Boxes</th>
                   <th>Dispatch Date</th><th>Delivered Date</th><th>Status</th>
                   <th>Last Updated</th><th></th>
                 </tr>
               </thead>
               <tbody id="register-tbody">
-                <tr><td colspan="15"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No records loaded.</div></div></td></tr>
+                <tr><td colspan="17"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No records loaded.</div></div></td></tr>
               </tbody>
             </table>
           </div>
@@ -473,6 +504,10 @@ tbody td{padding:9px 12px;font-size:12px;color:var(--text2);white-space:nowrap}
         <div class="pg-head">
           <div class="pg-title">Import Excel</div>
           <div class="pg-sub">Upload .xlsx to add records to Google Sheets</div>
+        </div>
+        <div class="imp-tabs" id="imp-tabs">
+          <button class="imp-tab active" id="imp-tab-sale" onclick="setImportMode('sale')">🧾 Sale</button>
+          <button class="imp-tab" id="imp-tab-sample" onclick="setImportMode('sample')">🎁 Sample &amp; Gift</button>
         </div>
         <div class="grid-360">
           <div style="display:flex;flex-direction:column;gap:14px">
@@ -493,18 +528,15 @@ tbody td{padding:9px 12px;font-size:12px;color:var(--text2);white-space:nowrap}
               </div>
             </div>
             <div class="card">
-              <div class="card-hd"><span class="card-title">📄 Expected Columns</span></div>
+              <div class="card-hd"><span class="card-title" id="exp-title">📄 Expected Columns</span><button class="btn btn-ghost btn-sm" onclick="downloadTemplate()">⬇ Template</button></div>
               <div class="card-body">
                 <div class="tbl-wrap">
                   <table>
-                    <thead><tr><th>DATE</th><th>TYPE</th><th>INV NO.</th><th>PARTY</th><th>PLACE</th><th>INV VALUE</th></tr></thead>
-                    <tbody>
-                      <tr><td class="td-m td-mu">20-09-26</td><td><span class="t-sale">Sale</span></td><td class="td-m td-b">101/S/542</td><td>ABC Pharma</td><td>Cochin</td><td class="td-m">5,000</td></tr>
-                      <tr><td class="td-m td-mu">20-09-26</td><td><span class="t-sample">Sample</span></td><td class="td-m td-b">SUP152</td><td>STAFF001</td><td>Chennai</td><td class="td-m">1,200</td></tr>
-                    </tbody>
+                    <thead id="exp-thead"></thead>
+                    <tbody id="exp-tbody"></tbody>
                   </table>
                 </div>
-                <div class="fh" style="margin-top:8px">Row 1 = header. Data from Row 2. Courier / POD not required.</div>
+                <div class="fh" id="exp-hint" style="margin-top:8px"></div>
               </div>
             </div>
           </div>
@@ -522,7 +554,7 @@ tbody td{padding:9px 12px;font-size:12px;color:var(--text2);white-space:nowrap}
             </div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Date</th><th>Type</th><th>Inv No</th><th>Party / Staff</th><th>Place</th><th>Value</th><th></th></tr></thead>
+                <thead id="preview-thead"></thead>
                 <tbody id="preview-tbody"></tbody>
               </table>
             </div>
@@ -541,42 +573,138 @@ tbody td{padding:9px 12px;font-size:12px;color:var(--text2);white-space:nowrap}
       <!-- ══ REPORTS ══ -->
       <div id="page-reports" style="display:none">
         <div class="pg-head">
-          <div class="pg-title">Reports</div>
-          <div class="pg-sub">Courier summary and pending follow-ups</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <div>
+              <div class="pg-title">Reports</div>
+              <div class="pg-sub">Filter, analyse and export dispatch data</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-ghost" onclick="manifestFromReports()">🖨 Manifest PDF</button>
+              <button class="btn btn-ghost" onclick="exportReport('records')">⬇ Records</button>
+              <button class="btn btn-primary" onclick="exportReport('all')">⬇ Export All (Excel)</button>
+            </div>
+          </div>
         </div>
+
+        <!-- Filters -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-body">
+            <div class="filter-bar">
+              <div style="display:flex;align-items:center;gap:6px"><span class="fh" style="margin:0">From</span><input class="fi" type="date" id="rpt-from" onchange="renderReports()"/></div>
+              <div style="display:flex;align-items:center;gap:6px"><span class="fh" style="margin:0">To</span><input class="fi" type="date" id="rpt-to" onchange="renderReports()"/></div>
+              <select class="fs" id="rpt-type" onchange="renderReports()" style="min-width:110px">
+                <option value="">All Types</option><option>Sale</option><option>Sample</option><option>Gift</option>
+              </select>
+              <select class="fs" id="rpt-status" onchange="renderReports()" style="min-width:120px">
+                <option value="">All Status</option>
+                <option>Pending</option><option>Dispatched</option><option>In Transit</option>
+                <option>Delivered</option><option>Returned</option><option>Cancelled</option>
+              </select>
+              <select class="fs" id="rpt-courier" onchange="renderReports()" style="min-width:130px"><option value="">All Couriers</option></select>
+              <div class="sw"><span class="sw-icon">🔍</span><input class="fi" id="rpt-search" placeholder="Inv / Party / Place / Purpose…" oninput="renderReports()"/></div>
+              <button class="btn btn-ghost btn-sm" onclick="clearReportFilters()">✕ Clear</button>
+            </div>
+            <div class="fh" id="rpt-filter-note" style="margin-top:8px"></div>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-strip">
+          <div class="kpi k-blue"><div class="kpi-icon">📦</div><div class="kpi-label">Records</div><div class="kpi-val" id="rp-total">—</div></div>
+          <div class="kpi k-indigo"><div class="kpi-icon">₹</div><div class="kpi-label">Invoice Value</div><div class="kpi-val" id="rp-value" style="font-size:22px">—</div></div>
+          <div class="kpi k-green"><div class="kpi-icon">✅</div><div class="kpi-label">Delivered</div><div class="kpi-val" id="rp-delivered">—</div></div>
+          <div class="kpi k-red"><div class="kpi-icon">⚠️</div><div class="kpi-label">Overdue (&gt;7 days)</div><div class="kpi-val" id="rp-overdue">—</div></div>
+        </div>
+
+        <!-- Courier -->
         <div class="card" style="margin-bottom:16px">
           <div class="card-hd">
             <span class="card-title">🚚 Courier-wise Summary</span>
-            <div class="filter-bar">
-              <select class="fs" id="rpt-status" onchange="renderReports()" style="min-width:130px">
-                <option value="">All Status</option>
-                <option>Pending</option><option>Dispatched</option>
-                <option>In Transit</option><option>Delivered</option><option>Returned</option>
-              </select>
-              <button class="btn btn-ghost btn-sm" onclick="renderReports()">↻</button>
-            </div>
+            <button class="btn btn-ghost btn-sm" onclick="exportReport('courier')">⬇ Excel</button>
           </div>
           <div class="tbl-wrap">
             <table>
               <thead><tr><th>Courier</th><th>Dispatches</th><th>Boxes</th><th>Invoice Value</th><th>Pending</th><th>Delivered</th></tr></thead>
-              <tbody id="courier-tbody">
-                <tr><td colspan="6"><div class="empty" style="padding:30px"><div class="empty-text">No data</div></div></td></tr>
-              </tbody>
+              <tbody id="courier-tbody"></tbody>
             </table>
           </div>
         </div>
+
+        <div class="grid-2" style="margin-bottom:16px">
+          <!-- Type -->
+          <div class="card">
+            <div class="card-hd">
+              <span class="card-title">🏷️ Type-wise Summary</span>
+              <button class="btn btn-ghost btn-sm" onclick="exportReport('type')">⬇ Excel</button>
+            </div>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>Type</th><th>Records</th><th>Value</th><th>Pending</th><th>Delivered</th></tr></thead>
+                <tbody id="type-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Month -->
+          <div class="card">
+            <div class="card-hd">
+              <span class="card-title">📅 Month-wise Summary</span>
+              <button class="btn btn-ghost btn-sm" onclick="exportReport('month')">⬇ Excel</button>
+            </div>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>Month</th><th>Records</th><th>Boxes</th><th>Value</th></tr></thead>
+                <tbody id="month-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Purpose -->
+        <div class="card" id="purpose-card" style="margin-bottom:16px">
+          <div class="card-hd">
+            <span class="card-title">🎯 Purpose-wise Summary (Sample &amp; Gift)</span>
+            <button class="btn btn-ghost btn-sm" onclick="exportReport('purpose')">⬇ Excel</button>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Purpose</th><th>Records</th><th>Sample</th><th>Gift</th><th>Invoice Value</th><th>Pending</th><th>Delivered</th></tr></thead>
+              <tbody id="purpose-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Place -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd">
+            <span class="card-title">📍 Place-wise Summary (Top 15)</span>
+            <button class="btn btn-ghost btn-sm" onclick="exportReport('place')">⬇ Excel</button>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Place</th><th>Records</th><th>Boxes</th><th>Value</th><th>Pending</th></tr></thead>
+              <tbody id="place-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Follow-up -->
         <div class="card">
-          <div class="card-hd"><span class="card-title">⏳ Pending Delivery — Follow-up</span></div>
+          <div class="card-hd">
+            <span class="card-title">⏳ Pending Delivery — Follow-up</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span id="rp-followup-count" class="badge badge-amber">0</span>
+              <button class="btn btn-ghost btn-sm" onclick="exportReport('followup')">⬇ Excel</button>
+            </div>
+          </div>
           <div class="tbl-wrap">
             <table>
               <thead><tr><th>ID</th><th>Inv No</th><th>Party</th><th>Place</th><th>Courier</th><th>POD</th><th>Dispatch Date</th><th>Days</th><th>Status</th></tr></thead>
-              <tbody id="followup-tbody">
-                <tr><td colspan="9"><div class="empty" style="padding:30px"><div class="empty-text">No pending deliveries</div></div></td></tr>
-              </tbody>
+              <tbody id="followup-tbody"></tbody>
             </table>
           </div>
         </div>
       </div>
+
 
     </div><!-- /main -->
   </div><!-- /body -->
@@ -590,6 +718,57 @@ tbody td{padding:9px 12px;font-size:12px;color:var(--text2);white-space:nowrap}
 
 <!-- TOAST -->
 <div id="toast"></div>
+
+<!-- BULK UPDATE MODAL -->
+<div class="modal-overlay" id="bulk-modal" style="display:none" onclick="if(event.target===this)closeBulk()">
+  <div class="modal">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title">Bulk Update</div>
+        <div class="modal-sub" id="bulk-sub">Applies to selected records. Blank fields stay unchanged.</div>
+      </div>
+      <button class="modal-close" onclick="closeBulk()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fr">
+        <div class="fg"><label class="fl">Courier Name</label><input class="fi" id="bk-courier" list="bk-courier-list" placeholder="DTDC, Trackon…"/><datalist id="bk-courier-list"></datalist></div>
+        <div class="fg"><label class="fl">POD No. (same for all)</label><input class="fi" id="bk-pod" placeholder="e.g. D123456789"/></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">No. of Boxes (same for all)</label><input class="fi" id="bk-boxes" type="number" min="0" placeholder="leave blank to keep"/></div>
+        <div class="fg"><label class="fl">Status</label>
+          <select class="fs" id="bk-status">
+            <option value="">— No change —</option>
+            <option>Pending</option><option>Dispatched</option><option>In Transit</option>
+            <option>Delivered</option><option>Returned</option><option>Cancelled</option>
+          </select>
+        </div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Dispatch Date</label><input class="fi" id="bk-ddate" type="date"/></div>
+        <div class="fg"><label class="fl">Delivered Date</label><input class="fi" id="bk-dlvdate" type="date"/></div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeBulk()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveBulk()" id="bulk-save-btn">Update Selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY MODAL -->
+<div class="modal-overlay" id="hist-modal" style="display:none" onclick="if(event.target===this)closeHistory()">
+  <div class="modal">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title">Record History</div>
+        <div class="modal-sub" id="hist-sub"></div>
+      </div>
+      <button class="modal-close" onclick="closeHistory()">✕</button>
+    </div>
+    <div class="modal-body" id="hist-body"></div>
+  </div>
+</div>
 
 <!-- EDIT MODAL -->
 <div class="modal-overlay" id="edit-modal" style="display:none" onclick="if(event.target===this)closeModal()">
@@ -611,6 +790,8 @@ tbody td{padding:9px 12px;font-size:12px;color:var(--text2);white-space:nowrap}
           <div class="locked-item"><label>Inv No / Supply ID</label><span id="mo-invno"></span></div>
           <div class="locked-item"><label>Party / Staff</label><span id="mo-party"></span></div>
           <div class="locked-item"><label>Place</label><span id="mo-place"></span></div>
+          <div class="locked-item" id="mo-purpose-wrap" style="display:none"><label>Purpose</label><span id="mo-purpose"></span></div>
+          <div class="locked-item" id="mo-details-wrap" style="display:none"><label>Details</label><span id="mo-details"></span></div>
           <div class="locked-item"><label>Invoice Value</label><span id="mo-value"></span></div>
           <div class="locked-item"><label>Uploaded On</label><span id="mo-uploaded"></span></div>
         </div>
@@ -755,6 +936,7 @@ function updateUserDisplay() {
 
 function applyUserTypeFilter() {
   const allowed = getAllowedTypes();
+  initImportTabs();
   const el = document.getElementById('reg-type');
   if (!el) return;
   el.style.display = allowed ? 'none' : '';
@@ -785,7 +967,7 @@ function showPage(id) {
 // ─── LOAD REGISTER ────────────────────────────────────────────────────
 async function loadRegister() {
   const tbody = document.getElementById('register-tbody');
-  tbody.innerHTML = '<tr><td colspan="15" style="padding:30px;text-align:center"><span class="spinner"></span> Loading…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="17" style="padding:30px;text-align:center"><span class="spinner"></span> Loading…</td></tr>';
   try {
     const res = await apiFetch({ action: 'getAll' });
     RECORDS = Array.isArray(res.rows) ? res.rows : [];
@@ -808,7 +990,7 @@ function renderRegister() {
   let rows = base.filter(r => {
     if (status && (r.status || 'Pending') !== status) return false;
     if (type   && r.type !== type) return false;
-    if (search && !`${r.invno} ${r.party} ${r.place} ${r.courier} ${r.pod}`.toLowerCase().includes(search)) return false;
+    if (search && !`${r.invno} ${r.party} ${r.place} ${r.courier} ${r.pod} ${r.purpose||''} ${r.details||''}`.toLowerCase().includes(search)) return false;
     return true;
   });
 
@@ -816,28 +998,33 @@ function renderRegister() {
     footer.style.display = base.length ? '' : 'none';
     footer.textContent = `Showing ${rows.length} of ${base.length} records`;
   }
+  VISIBLE_IDS = rows.map(r => r.id);
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="15"><div class="empty"><div class="empty-icon">${base.length ? '🔍' : '📋'}</div><div class="empty-text">${base.length ? 'No records match filter.' : 'No records yet.'}</div><div class="empty-hint">${base.length ? 'Try clearing the filter.' : 'Import Excel to begin.'}</div></div></td></tr>`;
+    syncSelectionUI();
+    tbody.innerHTML = `<tr><td colspan="17"><div class="empty"><div class="empty-icon">${base.length ? '🔍' : '📋'}</div><div class="empty-text">${base.length ? 'No records match filter.' : 'No records yet.'}</div><div class="empty-hint">${base.length ? 'Try clearing the filter.' : 'Import Excel to begin.'}</div></div></td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(r => `
-    <tr>
+    <tr class="${selectedIds.has(r.id)?'row-sel':''}">
+      <td><input type="checkbox" class="chk" ${selectedIds.has(r.id)?'checked':''} onchange="toggleSel('${r.id}',this.checked)"/></td>
       <td><span class="id-chip">${r.id||'—'}</span></td>
       <td class="td-m td-mu">${r.date||'—'}</td>
       <td><span class="${typeClass(r.type)}">${r.type||'—'}</span></td>
       <td class="td-m td-b">${r.invno||'—'}</td>
       <td>${r.party||'—'}</td>
       <td>${r.place||'—'}</td>
+      <td style="max-width:200px;line-height:1.5">${(r.purpose||r.details)?`<span class="td-b">${r.purpose||''}</span>${r.details?`<br><span class="td-mu" style="font-size:10px">${r.details}</span>`:''}`:'<span class="td-mu">—</span>'}</td>
       <td class="td-m">₹${fmt(r.value)}</td>
       <td>${r.courier?`<span class="td-b">${r.courier}</span>`:'<span class="td-mu">—</span>'}</td>
-      <td class="td-m">${r.pod||'<span class="td-mu">—</span>'}</td>
+      <td class="td-m">${podLink(r)}</td>
       <td class="td-m" style="text-align:center">${r.boxes||'<span class="td-mu">—</span>'}</td>
       <td class="td-m td-mu">${r.dispatchDate||'—'}</td>
       <td class="td-m td-mu">${r.deliveredDate||'—'}</td>
       <td>${pillHtml(r.status||'Pending')}</td>
       <td style="font-size:10px;color:var(--muted);line-height:1.6">${r.updatedBy?`<span style="color:var(--text2);font-weight:600">${r.updatedBy}</span><br>${fmtDateTime(r.updatedAt)}`:'—'}</td>
-      <td><button class="btn btn-edit btn-sm" onclick="openEdit('${r.id}')">Edit</button></td>
+      <td style="white-space:nowrap"><button class="btn btn-edit btn-sm" onclick="openEdit('${r.id}')">Edit</button> <button class="btn btn-ghost btn-sm" onclick="openHistory('${r.id}')" title="History">🕘</button></td>
     </tr>`).join('');
+  syncSelectionUI();
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────
@@ -891,56 +1078,329 @@ function renderDashboard() {
 }
 
 // ─── REPORTS ──────────────────────────────────────────────────────────
-function renderReports() {
-  const fs = document.getElementById('rpt-status')?.value || '';
-  const base = filterByUserType(RECORDS);
-  const rows = fs ? base.filter(r => (r.status||'Pending') === fs) : base;
+// ─── REPORTS ──────────────────────────────────────────────────────────
+function parseDMY(str) {
+  if (!str) return null;
+  const m = String(str).trim().match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
+  if (m) { const y = m[3].length===2 ? 2000+parseInt(m[3]) : parseInt(m[3]); return new Date(y, parseInt(m[2])-1, parseInt(m[1])); }
+  const d = new Date(str);
+  return isNaN(d) ? null : d;
+}
+function numVal(v) { return parseFloat(String(v||0).replace(/,/g,'')) || 0; }
+function inr(n) { return '₹' + Number(n||0).toLocaleString('en-IN'); }
+function daysSince(dateStr) {
+  const d = parseDMY(dateStr);
+  return d ? Math.floor((new Date() - d) / 86400000) : null;
+}
+function emptyRow(cols, msg) {
+  return `<tr><td colspan="${cols}"><div class="empty" style="padding:24px"><div class="empty-text">${msg}</div></div></td></tr>`;
+}
 
-  const cm = {};
-  rows.forEach(r => {
-    const c = r.courier?.trim() || '(No Courier)';
-    if (!cm[c]) cm[c] = {dispatches:0,boxes:0,value:0,pending:0,delivered:0};
-    cm[c].dispatches++;
-    cm[c].boxes   += parseInt(r.boxes)||0;
-    cm[c].value   += parseFloat(String(r.value||0).replace(/,/g,''))||0;
-    if ((r.status||'Pending') !== 'Delivered') cm[c].pending++;
-    if ((r.status||'Pending') === 'Delivered') cm[c].delivered++;
+function getReportRows() {
+  const g = id => document.getElementById(id)?.value || '';
+  const from = g('rpt-from'), to = g('rpt-to');
+  const type = g('rpt-type'), status = g('rpt-status'), courier = g('rpt-courier');
+  const q = g('rpt-search').toLowerCase().trim();
+  const fromD = from ? new Date(from + 'T00:00:00') : null;
+  const toD   = to   ? new Date(to   + 'T23:59:59') : null;
+  return filterByUserType(RECORDS).filter(r => {
+    if (type && r.type !== type) return false;
+    if (status && (r.status||'Pending') !== status) return false;
+    if (courier && (r.courier||'').trim() !== courier) return false;
+    if (fromD || toD) {
+      const d = parseDMY(r.date);
+      if (!d) return false;
+      if (fromD && d < fromD) return false;
+      if (toD && d > toD) return false;
+    }
+    if (q && !`${r.invno} ${r.party} ${r.place} ${r.courier} ${r.pod} ${r.purpose||''} ${r.details||''}`.toLowerCase().includes(q)) return false;
+    return true;
   });
+}
 
-  const sorted = Object.entries(cm).sort((a,b) => b[1].dispatches-a[1].dispatches);
-  document.getElementById('courier-tbody').innerHTML = !sorted.length
-    ? '<tr><td colspan="6"><div class="empty" style="padding:30px"><div class="empty-text">No data</div></div></td></tr>'
-    : sorted.map(([n,d]) => `<tr>
-        <td class="td-b">${n}</td>
-        <td class="td-m">${d.dispatches}</td>
-        <td class="td-m">${d.boxes}</td>
-        <td class="td-m">₹${d.value.toLocaleString('en-IN')}</td>
-        <td class="td-m" style="color:var(--amber);font-weight:600">${d.pending}</td>
-        <td class="td-m" style="color:var(--green);font-weight:600">${d.delivered}</td>
-      </tr>`).join('');
+function groupBy(rows, keyFn) {
+  const m = {};
+  rows.forEach(r => {
+    const k = keyFn(r);
+    if (!m[k]) m[k] = { n:0, boxes:0, value:0, pending:0, delivered:0 };
+    const st = r.status || 'Pending';
+    m[k].n++;
+    m[k].boxes += parseInt(r.boxes)||0;
+    m[k].value += numVal(r.value);
+    if (st === 'Delivered') m[k].delivered++; else if (st !== 'Cancelled' && st !== 'Returned') m[k].pending++;
+  });
+  return m;
+}
+function monthKey(r) {
+  const d = parseDMY(r.date);
+  return d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` : '(No Date)';
+}
+function monthLabel(k) {
+  if (k === '(No Date)') return k;
+  const [y,m] = k.split('-');
+  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1] + ' ' + y;
+}
 
-  const today = new Date();
-  const followup = base.filter(r => !['Delivered','Cancelled'].includes(r.status||'Pending') && r.courier);
-  document.getElementById('followup-tbody').innerHTML = !followup.length
-    ? '<tr><td colspan="9"><div class="empty" style="padding:30px"><div class="empty-text">No pending deliveries</div></div></td></tr>'
-    : followup.map(r => {
-        const dDate = r.dispatchDate ? new Date(r.dispatchDate.split('-').reverse().join('-')) : null;
-        const days = dDate && !isNaN(dDate) ? Math.floor((today-dDate)/86400000) : null;
-        const cls = days===null ? 'days-ok' : days>7 ? 'days-over' : days>3 ? 'days-warn' : 'days-ok';
-        return `<tr>
-          <td><span class="id-chip">${r.id}</span></td>
-          <td class="td-m td-b">${r.invno}</td><td>${r.party}</td><td>${r.place}</td>
-          <td style="font-weight:500">${r.courier||'—'}</td>
-          <td class="td-m">${r.pod||'—'}</td>
-          <td class="td-m td-mu">${r.dispatchDate||'—'}</td>
-          <td class="td-m ${cls}">${days!==null ? days+'d' : '—'}</td>
-          <td>${pillHtml(r.status||'Pending')}</td>
-        </tr>`;
-      }).join('');
+// Builds every report dataset once; used by both the screen and the Excel export
+function buildReportData() {
+  const rows = getReportRows();
+  const courier = Object.entries(groupBy(rows, r => r.courier?.trim() || '(No Courier)')).sort((a,b) => b[1].n - a[1].n);
+  const type    = Object.entries(groupBy(rows, r => r.type || '(No Type)')).sort((a,b) => b[1].n - a[1].n);
+  const month   = Object.entries(groupBy(rows, monthKey)).sort((a,b) => b[0].localeCompare(a[0]));
+  const place   = Object.entries(groupBy(rows, r => (r.place||'(No Place)').trim())).sort((a,b) => b[1].value - a[1].value);
+  const pm = {};
+  rows.forEach(r => {
+    const raw = (r.purpose||'').trim();
+    if (!raw) return;                       // Sale rows have no purpose
+    const k = raw.toLowerCase();
+    if (!pm[k]) pm[k] = { label: raw, n:0, sample:0, gift:0, value:0, pending:0, delivered:0 };
+    const st = r.status||'Pending', t = (r.type||'').toLowerCase();
+    pm[k].n++;
+    if (t==='sample') pm[k].sample++; else if (t==='gift') pm[k].gift++;
+    pm[k].value += numVal(r.value);
+    if (st==='Delivered') pm[k].delivered++; else if (st!=='Cancelled' && st!=='Returned') pm[k].pending++;
+  });
+  const purpose = Object.values(pm).sort((a,b) => b.n - a.n);
+  const followup = rows
+    .filter(r => !['Delivered','Cancelled','Returned'].includes(r.status||'Pending') && r.courier)
+    .map(r => ({ r, days: daysSince(r.dispatchDate) }))
+    .sort((a,b) => (b.days ?? -1) - (a.days ?? -1));
+  return { rows, courier, type, month, place, purpose, followup };
+}
+
+function clearReportFilters() {
+  ['rpt-from','rpt-to','rpt-type','rpt-status','rpt-courier','rpt-search'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  renderReports();
+}
+
+function renderReports() {
+  // Refresh courier dropdown (keep selection)
+  const cs = document.getElementById('rpt-courier');
+  if (cs) {
+    const cur = cs.value;
+    const couriers = [...new Set(filterByUserType(RECORDS).map(r => (r.courier||'').trim()).filter(Boolean))].sort();
+    cs.innerHTML = '<option value="">All Couriers</option>' + couriers.map(c => `<option${c===cur?' selected':''}>${c}</option>`).join('');
+  }
+  const typeSel = document.getElementById('rpt-type');
+  if (typeSel) typeSel.style.display = getAllowedTypes() ? 'none' : '';
+
+  const D = buildReportData();
+  const totalAll = filterByUserType(RECORDS).length;
+
+  // KPIs
+  const tv = D.rows.reduce((a,r) => a + numVal(r.value), 0);
+  setText('rp-total', D.rows.length);
+  setText('rp-value', inr(tv));
+  setText('rp-delivered', D.rows.filter(r => (r.status||'Pending')==='Delivered').length);
+  setText('rp-overdue', D.followup.filter(x => x.days !== null && x.days > 7).length);
+  setText('rp-followup-count', D.followup.length);
+  setText('rpt-filter-note', `Showing ${D.rows.length} of ${totalAll} records. Exports use the current filters.`);
+
+  // Courier
+  document.getElementById('courier-tbody').innerHTML = !D.courier.length ? emptyRow(6,'No data') :
+    D.courier.map(([n,d]) => `<tr>
+      <td class="td-b">${n}</td><td class="td-m">${d.n}</td><td class="td-m">${d.boxes}</td>
+      <td class="td-m">${inr(d.value)}</td>
+      <td class="td-m" style="color:var(--amber);font-weight:600">${d.pending}</td>
+      <td class="td-m" style="color:var(--green);font-weight:600">${d.delivered}</td></tr>`).join('');
+
+  // Type
+  document.getElementById('type-tbody').innerHTML = !D.type.length ? emptyRow(5,'No data') :
+    D.type.map(([n,d]) => `<tr>
+      <td><span class="${typeClass(n)}">${n}</span></td><td class="td-m">${d.n}</td>
+      <td class="td-m">${inr(d.value)}</td>
+      <td class="td-m" style="color:var(--amber);font-weight:600">${d.pending}</td>
+      <td class="td-m" style="color:var(--green);font-weight:600">${d.delivered}</td></tr>`).join('');
+
+  // Month
+  document.getElementById('month-tbody').innerHTML = !D.month.length ? emptyRow(4,'No data') :
+    D.month.map(([k,d]) => `<tr>
+      <td class="td-b">${monthLabel(k)}</td><td class="td-m">${d.n}</td><td class="td-m">${d.boxes}</td>
+      <td class="td-m">${inr(d.value)}</td></tr>`).join('');
+
+  // Purpose
+  const pc = document.getElementById('purpose-card');
+  const allowed = getAllowedTypes();
+  if (pc) pc.style.display = (allowed && !allowed.some(t => t.toLowerCase()!=='sale')) ? 'none' : '';
+  document.getElementById('purpose-tbody').innerHTML = !D.purpose.length ? emptyRow(7,'No Sample / Gift records with purpose') :
+    D.purpose.map(d => `<tr>
+      <td class="td-b">${d.label}</td><td class="td-m">${d.n}</td>
+      <td class="td-m">${d.sample}</td><td class="td-m">${d.gift}</td>
+      <td class="td-m">${inr(d.value)}</td>
+      <td class="td-m" style="color:var(--amber);font-weight:600">${d.pending}</td>
+      <td class="td-m" style="color:var(--green);font-weight:600">${d.delivered}</td></tr>`).join('');
+
+  // Place (top 15 on screen; export has all)
+  document.getElementById('place-tbody').innerHTML = !D.place.length ? emptyRow(5,'No data') :
+    D.place.slice(0,15).map(([n,d]) => `<tr>
+      <td class="td-b">${n}</td><td class="td-m">${d.n}</td><td class="td-m">${d.boxes}</td>
+      <td class="td-m">${inr(d.value)}</td>
+      <td class="td-m" style="color:var(--amber);font-weight:600">${d.pending}</td></tr>`).join('');
+
+  // Follow-up
+  document.getElementById('followup-tbody').innerHTML = !D.followup.length ? emptyRow(9,'No pending deliveries') :
+    D.followup.map(({r,days}) => {
+      const cls = days===null ? 'days-ok' : days>7 ? 'days-over' : days>3 ? 'days-warn' : 'days-ok';
+      return `<tr>
+        <td><span class="id-chip">${r.id}</span></td>
+        <td class="td-m td-b">${r.invno}</td><td>${r.party}</td><td>${r.place}</td>
+        <td style="font-weight:500">${r.courier||'—'}</td>
+        <td class="td-m">${podLink(r)}</td>
+        <td class="td-m td-mu">${r.dispatchDate||'—'}</td>
+        <td class="td-m ${cls}">${days!==null ? days+'d' : '—'}</td>
+        <td>${pillHtml(r.status||'Pending')}</td></tr>`;
+    }).join('');
+}
+
+// ─── REPORT EXCEL EXPORT ──────────────────────────────────────────────
+function mkSheet(aoa, widths) {
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = widths.map(w => ({ wch: w }));
+  if (aoa.length) ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:aoa.length-1, c:aoa[0].length-1} }) };
+  return ws;
+}
+function sheetRecords(D) {
+  const hdr = ['ID','Date','Type','Inv No','Party / Staff','Place','Purpose','Details','Invoice Value','Courier','POD','Boxes','Status','Dispatch Date','Delivered Date','Uploaded Date','Uploaded By','Updated By','Updated At'];
+  const body = D.rows.map(r => [r.id, r.date, r.type, r.invno, r.party, r.place, r.purpose||'', r.details||'', numVal(r.value), r.courier||'', r.pod||'', parseInt(r.boxes)||0, r.status||'Pending', r.dispatchDate||'', r.deliveredDate||'', r.uploadedDate||'', r.uploadedBy||'', r.updatedBy||'', r.updatedAt ? fmtDateTime(r.updatedAt) : '']);
+  const total = ['TOTAL','','','','','','','', body.reduce((a,x)=>a+x[8],0), '','', body.reduce((a,x)=>a+x[11],0), '','','','','','',''];
+  return mkSheet([hdr, ...body, total], [10,12,9,16,22,16,18,28,14,14,16,8,12,13,13,13,12,12,20]);
+}
+function sheetGroup(label, entries, withBoxes, labelFn) {
+  const hdr = [label, 'Records', ...(withBoxes ? ['Boxes'] : []), 'Invoice Value', 'Pending', 'Delivered'];
+  const body = entries.map(([k,d]) => [labelFn ? labelFn(k) : k, d.n, ...(withBoxes ? [d.boxes] : []), d.value, d.pending, d.delivered]);
+  const sum = i => body.reduce((a,x) => a + (x[i]||0), 0);
+  const total = ['TOTAL', sum(1), ...(withBoxes ? [sum(2)] : []), sum(withBoxes?3:2), sum(withBoxes?4:3), sum(withBoxes?5:4)];
+  return mkSheet([hdr, ...body, total], [24,10,...(withBoxes?[8]:[]),16,10,10]);
+}
+function sheetPurpose(D) {
+  const hdr = ['Purpose','Records','Sample','Gift','Invoice Value','Pending','Delivered'];
+  const body = D.purpose.map(d => [d.label, d.n, d.sample, d.gift, d.value, d.pending, d.delivered]);
+  const sum = i => body.reduce((a,x) => a + (x[i]||0), 0);
+  return mkSheet([hdr, ...body, ['TOTAL', sum(1), sum(2), sum(3), sum(4), sum(5), sum(6)]], [26,10,9,9,16,10,10]);
+}
+function sheetFollowup(D) {
+  const hdr = ['ID','Inv No','Type','Party / Staff','Place','Courier','POD','Dispatch Date','Days Pending','Status','Invoice Value'];
+  const body = D.followup.map(({r,days}) => [r.id, r.invno, r.type, r.party, r.place, r.courier||'', r.pod||'', r.dispatchDate||'', days===null ? '' : days, r.status||'Pending', numVal(r.value)]);
+  return mkSheet([hdr, ...body], [10,16,9,22,16,14,16,13,13,12,14]);
+}
+function sheetSummary(D) {
+  const g = id => document.getElementById(id)?.value || '';
+  const f = [['From',g('rpt-from')],['To',g('rpt-to')],['Type',g('rpt-type')],['Status',g('rpt-status')],['Courier',g('rpt-courier')],['Search',g('rpt-search')]].filter(x => x[1]);
+  const aoa = [
+    ['Dispatch Report'],
+    ['Generated', new Date().toLocaleString('en-IN')],
+    ['Generated By', CFG.user || ''],
+    [],
+    ['Filters', f.length ? f.map(x => x[0]+': '+x[1]).join(' | ') : 'None'],
+    [],
+    ['Total Records', D.rows.length],
+    ['Total Invoice Value', D.rows.reduce((a,r) => a + numVal(r.value), 0)],
+    ['Total Boxes', D.rows.reduce((a,r) => a + (parseInt(r.boxes)||0), 0)],
+    ['Delivered', D.rows.filter(r => (r.status||'Pending')==='Delivered').length],
+    ['Pending Follow-ups', D.followup.length],
+    ['Overdue (>7 days)', D.followup.filter(x => x.days !== null && x.days > 7).length]
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:22},{wch:50}];
+  return ws;
+}
+
+function exportReport(kind) {
+  if (typeof XLSX === 'undefined') { toast('Excel library not loaded.', 'err'); return; }
+  const D = buildReportData();
+  if (!D.rows.length) { toast('No data to export for current filters.', 'err'); return; }
+  const wb = XLSX.utils.book_new();
+  const add = (ws, name) => XLSX.utils.book_append_sheet(wb, ws, name);
+  const map = {
+    records:  () => add(sheetRecords(D), 'Records'),
+    courier:  () => add(sheetGroup('Courier', D.courier, true), 'Courier Summary'),
+    type:     () => add(sheetGroup('Type', D.type, false), 'Type Summary'),
+    month:    () => add(sheetGroup('Month', D.month, true, monthLabel), 'Month Summary'),
+    purpose:  () => { if (D.purpose.length) add(sheetPurpose(D), 'Purpose Summary'); },
+    place:    () => add(sheetGroup('Place', D.place, true), 'Place Summary'),
+    followup: () => add(sheetFollowup(D), 'Pending Follow-up')
+  };
+  if (kind === 'all') {
+    add(sheetSummary(D), 'Summary');
+    ['records','courier','type','month','purpose','place','followup'].forEach(k => map[k]());
+  } else if (map[kind]) {
+    if (kind==='purpose' && !D.purpose.length) { toast('No Sample / Gift purpose data to export.', 'err'); return; }
+    map[kind]();
+  } else return;
+  const stamp = new Date().toISOString().slice(0,10);
+  const names = { all:'Dispatch_Report', records:'Dispatch_Records', courier:'Courier_Summary', type:'Type_Summary', month:'Month_Summary', purpose:'Purpose_Summary', place:'Place_Summary', followup:'Pending_Followup' };
+  XLSX.writeFile(wb, `${names[kind]}_${stamp}.xlsx`);
+  toast('Excel exported.', 'ok');
 }
 
 // ─── EXCEL IMPORT ─────────────────────────────────────────────────────
 let previewRows = [];
+let importMode = 'sale';   // 'sale' | 'sample'
+
+const IMPORT_CFG = {
+  sale: {
+    title: '📄 Sale Template',
+    cols: ['DATE','TYPE','INV NO.','PARTY','PLACE','INV VALUE'],
+    sample: [['20-09-2026','Sale','101/S/542','ABC Pharma','Cochin','5000'],
+             ['21-09-2026','Sale','101/S/543','XYZ Distributors','Chennai','12500']],
+    hint: 'Row 1 = header. Data from Row 2. TYPE must be Sale. Courier / POD not required.',
+    file: 'Sale_Upload_Template.xlsx'
+  },
+  sample: {
+    title: '📄 Sample & Gift Template',
+    cols: ['DATE','TYPE','INV NO.','PARTY','PLACE','PURPOSE','DETAILS','INV VALUE'],
+    sample: [['20-09-2026','Sample','SUP152','STAFF001','Chennai','Doctor Sample','Product A x 10, Product B x 5','1200'],
+             ['21-09-2026','Gift','GFT045','Dr. Kumar','Madurai','Festival Gift','Diary + Pen set','800']],
+    hint: 'Row 1 = header. TYPE must be Sample or Gift. PURPOSE required. DETAILS optional.',
+    file: 'Sample_Gift_Upload_Template.xlsx'
+  }
+};
+
+function initImportTabs() {
+  const allowed = getAllowedTypes();
+  const tabs = document.getElementById('imp-tabs');
+  if (!tabs) return;
+  let mode = 'sale';
+  if (allowed) {
+    const isSample = allowed.some(t => t.toLowerCase()==='sample');
+    mode = isSample ? 'sample' : 'sale';
+    tabs.style.display = 'none';
+  } else {
+    tabs.style.display = '';
+  }
+  setImportMode(mode, true);
+}
+
+function setImportMode(mode, silent) {
+  if (!silent && previewRows.length && mode !== importMode) {
+    if (!confirm('Switching template will clear the current preview. Continue?')) return;
+  }
+  if (mode !== importMode) clearPreview();
+  importMode = mode;
+  document.getElementById('imp-tab-sale')?.classList.toggle('active', mode==='sale');
+  document.getElementById('imp-tab-sample')?.classList.toggle('active', mode==='sample');
+  const c = IMPORT_CFG[mode];
+  setText('exp-title', c.title);
+  setText('exp-hint', c.hint);
+  document.getElementById('exp-thead').innerHTML = '<tr>' + c.cols.map(h => `<th>${h}</th>`).join('') + '</tr>';
+  document.getElementById('exp-tbody').innerHTML = c.sample.map(row => '<tr>' + row.map((v,i) => {
+    const h = c.cols[i];
+    if (h==='TYPE') return `<td><span class="${typeClass(v)}">${v}</span></td>`;
+    if (h==='INV NO.') return `<td class="td-m td-b">${v}</td>`;
+    if (h==='DATE') return `<td class="td-m td-mu">${v}</td>`;
+    if (h==='INV VALUE') return `<td class="td-m">${fmt(v)}</td>`;
+    return `<td>${v}</td>`;
+  }).join('') + '</tr>').join('');
+}
+
+function downloadTemplate() {
+  const c = IMPORT_CFG[importMode];
+  const ws = XLSX.utils.aoa_to_sheet([c.cols, ...c.sample]);
+  ws['!cols'] = c.cols.map(h => ({ wch: h==='DETAILS' ? 34 : h==='PURPOSE' ? 20 : h==='PARTY' ? 22 : 14 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, importMode==='sample' ? 'Sample_Gift' : 'Sale');
+  XLSX.writeFile(wb, c.file);
+}
 
 function handleDrop(e) {
   e.preventDefault();
@@ -957,10 +1417,15 @@ function readExcelFile(file) {
       const wb = XLSX.read(e.target.result, { type: 'binary' });
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
       if (!rows.length) { toast('No data found.', 'err'); return; }
-      previewRows = rows.map(normalizeRow).filter(r => r.isValid);
+      const parsed = rows.map(r => normalizeRow(r, importMode));
+      const okTypes = importMode==='sample' ? ['sample','gift'] : ['sale'];
+      const good = parsed.filter(r => r.isValid && okTypes.includes((r.type||'').toLowerCase()));
+      const skipped = parsed.length - good.length;
+      previewRows = good;
       const allowed = getAllowedTypes();
       if (allowed) previewRows = previewRows.filter(r => allowed.some(t => (r.type||'').toLowerCase()===t.toLowerCase()));
-      if (!previewRows.length) { toast('No valid records. Check column names.', 'err'); return; }
+      if (!previewRows.length) { toast('No valid records. Check column names / TYPE.', 'err'); return; }
+      if (skipped) toast(skipped + ' row(s) skipped (missing fields or wrong TYPE).', 'info');
       renderPreview();
     } catch(ex) { toast('Could not read file: ' + ex.message, 'err'); }
   };
@@ -968,7 +1433,7 @@ function readExcelFile(file) {
   reader.readAsBinaryString(file);
 }
 
-function normalizeRow(r) {
+function normalizeRow(r, mode) {
   const k = Object.keys(r);
   const get = (...names) => {
     for (const n of names) {
@@ -982,8 +1447,10 @@ function normalizeRow(r) {
   if (dateVal && !isNaN(dateVal) && dateVal.length <= 6) {
     dateVal = new Date((parseInt(dateVal)-25569)*86400*1000).toLocaleDateString('en-IN').replace(/\//g,'-');
   } else if (dateVal && dateVal.includes('T')) dateVal = dateVal.split('T')[0];
-  const n = { date:dateVal, type:get('TYPE'), invno:get('INVNO','SUPPLYID','INV NO','SUPPLY ID','INVOICENO'), party:get('PARTY','STAFFID','STAFF ID','PARTYSTAFF'), place:get('PLACE'), value:get('INVVALUE','INV VALUE','VALUE'), isValid:true };
+  const n = { date:dateVal, type:get('TYPE'), invno:get('INVNO','SUPPLYID','INV NO','SUPPLY ID','INVOICENO'), party:get('PARTY','STAFFID','STAFF ID','PARTYSTAFF'), place:get('PLACE'), value:get('INVVALUE','INV VALUE','VALUE'), purpose:'', details:'', isValid:true };
+  if (mode==='sample') { n.purpose = get('PURPOSE'); n.details = get('DETAILS','DETAIL'); }
   if (!n.date||!n.type||!n.invno||!n.party||!n.place||!n.value) n.isValid = false;
+  if (mode==='sample' && !n.purpose) n.isValid = false;
   return n;
 }
 
@@ -993,6 +1460,8 @@ function renderPreview() {
   if (!previewRows.length) { pc.style.display='none'; pp.style.display='flex'; return; }
   pc.style.display=''; pp.style.display='none';
   document.getElementById('preview-count').textContent = previewRows.length + ' rows';
+  const sm = importMode==='sample';
+  document.getElementById('preview-thead').innerHTML = '<tr><th>#</th><th>Date</th><th>Type</th><th>Inv No</th><th>Party / Staff</th><th>Place</th>' + (sm ? '<th>Purpose</th><th>Details</th>' : '') + '<th>Value</th><th></th></tr>';
   document.getElementById('preview-tbody').innerHTML = previewRows.map((r,i) => `
     <tr>
       <td class="td-mu td-m">${i+1}</td>
@@ -1000,6 +1469,7 @@ function renderPreview() {
       <td><span class="${typeClass(r.type)}">${r.type||'—'}</span></td>
       <td class="td-m td-b">${r.invno||'—'}</td>
       <td>${r.party||'—'}</td><td>${r.place||'—'}</td>
+      ${sm ? `<td>${r.purpose||'—'}</td><td>${r.details||'—'}</td>` : ''}
       <td class="td-m">₹${fmt(r.value)}</td>
       <td><button class="btn btn-danger btn-sm" onclick="removePreviewRow(${i})">✕</button></td>
     </tr>`).join('');
@@ -1047,6 +1517,10 @@ function openEdit(id) {
   document.getElementById('mo-party').textContent  = r.party||'—';
   document.getElementById('mo-place').textContent  = r.place||'—';
   document.getElementById('mo-value').textContent  = '₹'+fmt(r.value||0);
+  document.getElementById('mo-purpose-wrap').style.display = r.purpose ? '' : 'none';
+  document.getElementById('mo-details-wrap').style.display = r.details ? '' : 'none';
+  document.getElementById('mo-purpose').textContent = r.purpose||'';
+  document.getElementById('mo-details').textContent = r.details||'';
   document.getElementById('mo-uploaded').textContent = r.uploadedDate||'—';
   document.getElementById('mo-courier').value = r.courier||'';
   document.getElementById('mo-pod').value     = r.pod||'';
@@ -1085,6 +1559,228 @@ async function saveEdit() {
   } finally {
     btn.disabled=false; btn.innerHTML='Save Changes';
   }
+}
+
+// ─── COURIER TRACKING LINKS ───────────────────────────────────────────
+// Edit freely. `match` = lowercase keywords found in the courier name.
+// If url contains {pod}, the POD is inserted into the link; otherwise the
+// courier's tracking page opens and the POD is copied to the clipboard.
+const COURIER_TRACK = [
+  { match:['dtdc'],                 url:'https://www.dtdc.in/' },
+  { match:['trackon'],              url:'https://www.trackon.in/' },
+  { match:['blue dart','bluedart'], url:'https://www.bluedart.com/trackdartresultthirdparty?trackFor=0&trackNo={pod}' },
+  { match:['delhivery'],            url:'https://www.delhivery.com/track-v2/package/{pod}' },
+  { match:['fedex'],                url:'https://www.fedex.com/fedextrack/?trknbr={pod}' },
+  { match:['dhl'],                  url:'https://www.dhl.com/in-en/home/tracking.html?tracking-id={pod}' },
+  { match:['india post','speed post','indiapost'], url:'https://www.indiapost.gov.in/' },
+  { match:['professional','tpc'],   url:'https://www.tpcindia.com/' }
+];
+function escAttr(v) { return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function podLink(r) {
+  const pod = (r.pod||'').trim();
+  if (!pod) return '<span class="td-mu">—</span>';
+  return `<a class="pod-link" href="#" data-pod="${escAttr(pod)}" data-courier="${escAttr(r.courier||'')}" onclick="trackPod(this);return false" title="Track shipment (POD is copied)">${escAttr(pod)} ↗</a>`;
+}
+function trackUrl(courier, pod) {
+  const c = (courier||'').toLowerCase();
+  const e = COURIER_TRACK.find(x => x.match.some(m => c.includes(m)));
+  if (e) return { url: e.url.replace('{pod}', encodeURIComponent(pod)), deep: e.url.includes('{pod}') };
+  return { url: 'https://www.google.com/search?q=' + encodeURIComponent((courier||'courier') + ' tracking ' + pod), deep: true };
+}
+async function trackPod(el) {
+  const pod = el.dataset.pod, courier = el.dataset.courier;
+  try { await navigator.clipboard.writeText(pod); } catch(e) {
+    const t = document.createElement('textarea'); t.value = pod; document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); } catch(_) {} t.remove();
+  }
+  const t = trackUrl(courier, pod);
+  window.open(t.url, '_blank', 'noopener');
+  toast(t.deep ? 'Opening tracking…' : 'POD copied — paste it on the tracking page.', 'info');
+}
+
+// ─── ROW SELECTION + BULK UPDATE ──────────────────────────────────────
+let selectedIds = new Set();
+let VISIBLE_IDS = [];
+
+function toggleSel(id, on) {
+  if (on) selectedIds.add(id); else selectedIds.delete(id);
+  renderRegister();
+}
+function toggleSelAll(cb) {
+  if (cb.checked) VISIBLE_IDS.forEach(id => selectedIds.add(id));
+  else VISIBLE_IDS.forEach(id => selectedIds.delete(id));
+  renderRegister();
+}
+function clearSelection() { selectedIds.clear(); renderRegister(); }
+function syncSelectionUI() {
+  const known = new Set(RECORDS.map(r => r.id));
+  [...selectedIds].forEach(id => { if (!known.has(id)) selectedIds.delete(id); });
+  const n = selectedIds.size;
+  const bar = document.getElementById('bulk-bar');
+  if (bar) bar.style.display = n ? 'flex' : 'none';
+  setText('bulk-count', n + ' selected');
+  const all = document.getElementById('sel-all');
+  if (all) {
+    const vis = VISIBLE_IDS.length, sel = VISIBLE_IDS.filter(id => selectedIds.has(id)).length;
+    all.checked = vis > 0 && sel === vis;
+    all.indeterminate = sel > 0 && sel < vis;
+  }
+}
+
+function openBulk() {
+  if (!selectedIds.size) { toast('Select records first.', 'err'); return; }
+  setText('bulk-sub', `Applies to ${selectedIds.size} selected record(s). Blank fields stay unchanged.`);
+  ['bk-courier','bk-pod','bk-boxes','bk-status','bk-ddate','bk-dlvdate'].forEach(id => { document.getElementById(id).value = ''; });
+  const couriers = [...new Set(filterByUserType(RECORDS).map(r => (r.courier||'').trim()).filter(Boolean))].sort();
+  document.getElementById('bk-courier-list').innerHTML = couriers.map(c => `<option value="${escAttr(c)}">`).join('');
+  document.getElementById('bulk-modal').style.display = 'flex';
+}
+function closeBulk() { document.getElementById('bulk-modal').style.display = 'none'; }
+function ymdToDmy(v) { const m = String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? `${m[3]}-${m[2]}-${m[1]}` : v; }
+
+async function saveBulk() {
+  const g = id => (document.getElementById(id).value || '').trim();
+  const fields = {};
+  if (g('bk-courier'))  fields.courier = g('bk-courier');
+  if (g('bk-pod'))      fields.pod = g('bk-pod');
+  if (g('bk-boxes'))    fields.boxes = g('bk-boxes');
+  if (g('bk-status'))   fields.status = g('bk-status');
+  if (g('bk-ddate'))    fields.dispatchDate = g('bk-ddate');
+  if (g('bk-dlvdate'))  fields.deliveredDate = g('bk-dlvdate');
+  if (!Object.keys(fields).length) { toast('Fill at least one field.', 'err'); return; }
+  const ids = [...selectedIds];
+  if (!confirm(`Update ${ids.length} record(s)?`)) return;
+  const btn = document.getElementById('bulk-save-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Updating…';
+  try {
+    const res = await apiFetch({ action:'bulkUpdate', ids, fields, updatedBy: CFG.user });
+    const nowIso = new Date().toISOString();
+    ids.forEach(id => {
+      const r = RECORDS.find(x => x.id === id); if (!r) return;
+      Object.entries(fields).forEach(([k,v]) => { r[k] = (k==='dispatchDate'||k==='deliveredDate') ? ymdToDmy(v) : v; });
+      r.updatedBy = CFG.user; r.updatedAt = nowIso;
+    });
+    toast(`${res.updated ?? ids.length} record(s) updated.` + (res.unchanged ? ` ${res.unchanged} already matched.` : ''), 'ok');
+    closeBulk(); selectedIds.clear();
+    renderRegister(); renderDashboard(); renderReports();
+  } catch(e) {
+    toast('Bulk update failed: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.innerHTML = 'Update Selected';
+  }
+}
+
+// ─── RECORD HISTORY ───────────────────────────────────────────────────
+function closeHistory() { document.getElementById('hist-modal').style.display = 'none'; }
+async function openHistory(id) {
+  const r = RECORDS.find(x => x.id === id); if (!r) return;
+  setText('hist-sub', `${r.id} · Inv ${r.invno||'—'} · ${r.party||''}`);
+  const body = document.getElementById('hist-body');
+  body.innerHTML = '<div style="padding:30px;text-align:center"><span class="spinner"></span> Loading…</div>';
+  document.getElementById('hist-modal').style.display = 'flex';
+  try {
+    const res = await apiFetch({ action:'getHistory', id });
+    const entries = (res.entries || []).slice().reverse();     // newest first
+    const items = entries.map(e => {
+      const parts = String(e.details||'').split(' | ');
+      const changes = parts.length > 1 ? parts.slice(1).join(' | ').split('; ').filter(Boolean) : [];
+      const bulk = e.action === 'BULK_UPDATE';
+      return `<div class="tl-item">
+        <div class="tl-dot ${bulk?'bulk':''}"></div>
+        <div class="tl-head"><span class="tl-act">${bulk?'Bulk updated':'Updated'}</span><span class="tl-time">${escAttr(e.time)}</span></div>
+        <div class="tl-by">by ${escAttr(e.user||'—')}</div>
+        ${changes.length ? `<div class="tl-chg">${changes.map(c => {
+          const k = c.indexOf(': ');
+          return k>0 ? `<div><b>${escAttr(c.slice(0,k))}</b>: ${escAttr(c.slice(k+2))}</div>` : `<div>${escAttr(c)}</div>`;
+        }).join('')}</div>` : ''}
+      </div>`;
+    });
+    items.push(`<div class="tl-item">
+      <div class="tl-dot imp"></div>
+      <div class="tl-head"><span class="tl-act">Imported</span><span class="tl-time">${escAttr(r.uploadedDate||'—')}</span></div>
+      <div class="tl-by">by ${escAttr(r.uploadedBy||'—')}</div>
+    </div>`);
+    body.innerHTML = `<div class="tl">${items.join('')}</div>` +
+      (entries.length ? '' : '<div class="fh" style="margin-top:4px">No updates recorded yet.</div>');
+  } catch(e) {
+    body.innerHTML = `<div class="empty"><div class="empty-text">Could not load history</div><div class="empty-hint">${escAttr(e.message)}</div></div>`;
+  }
+}
+
+// ─── COURIER MANIFEST PDF ─────────────────────────────────────────────
+function pdfTxt(v) { return String(v==null?'':v).replace(/₹/g,'Rs.').replace(/[^\x20-\xFF]/g,''); }
+function manifestSelected() {
+  const rows = RECORDS.filter(r => selectedIds.has(r.id));
+  generateManifest(rows, 'Selected');
+}
+function manifestFromReports() { generateManifest(getReportRows(), 'Report'); }
+
+function generateManifest(rows, label) {
+  if (!rows.length) { toast('No records for manifest.', 'err'); return; }
+  const J = window.jspdf && window.jspdf.jsPDF;
+  if (!J) { toast('PDF library not loaded. Check internet.', 'err'); return; }
+  const doc = new J({ orientation:'landscape', unit:'mm', format:'a4' });
+  if (typeof doc.autoTable !== 'function') { toast('PDF table plugin not loaded.', 'err'); return; }
+
+  const NONE = '(Courier not assigned)';
+  const groups = {};
+  rows.forEach(r => { const c = (r.courier||'').trim() || NONE; (groups[c] = groups[c] || []).push(r); });
+  const names = Object.keys(groups).sort((a,b) => a===NONE ? 1 : b===NONE ? -1 : a.localeCompare(b));
+  const now = new Date();
+  const today = `${String(now.getDate()).padStart(2,'0')}-${String(now.getMonth()+1).padStart(2,'0')}-${now.getFullYear()}`;
+  const W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight();
+
+  names.forEach((name, gi) => {
+    if (gi > 0) doc.addPage();
+    const list = groups[name].slice().sort((a,b) => String(a.invno).localeCompare(String(b.invno), undefined, {numeric:true}));
+    const boxes = list.reduce((a,r) => a + (parseInt(r.boxes)||0), 0);
+    const value = list.reduce((a,r) => a + numVal(r.value), 0);
+
+    doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(30,41,59);
+    doc.text('DISPATCH MANIFEST', 14, 14);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(100,116,139);
+    doc.text('Pristine Pearl Pharma Pvt Ltd', W-14, 14, { align:'right' });
+    doc.setDrawColor(37,99,235); doc.setLineWidth(.6); doc.line(14, 17, W-14, 17);
+
+    doc.setFontSize(10); doc.setTextColor(15,23,42); doc.setFont('helvetica','bold');
+    doc.text('Courier: ' + pdfTxt(name), 14, 24);
+    doc.setFont('helvetica','normal'); doc.setTextColor(51,65,85);
+    doc.text(`Date: ${today}    Records: ${list.length}    Boxes: ${boxes}    Value: Rs. ${value.toLocaleString('en-IN')}`, 14, 30);
+
+    doc.autoTable({
+      startY: 34,
+      head: [['#','ID','Date','Type','Inv No','Party / Staff','Place','Purpose / Details','POD','Boxes','Value (Rs.)']],
+      body: list.map((r,i) => [
+        i+1, pdfTxt(r.id), pdfTxt(r.date), pdfTxt(r.type), pdfTxt(r.invno), pdfTxt(r.party), pdfTxt(r.place),
+        pdfTxt([r.purpose, r.details].filter(Boolean).join(' - ')) || '-',
+        pdfTxt(r.pod) || '-', r.boxes || '-', numVal(r.value).toLocaleString('en-IN')
+      ]),
+      foot: [['','','','','','','','','Total', boxes, value.toLocaleString('en-IN')]],
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 1.8, lineColor:[203,213,225], lineWidth:.2, textColor:[15,23,42], overflow:'linebreak' },
+      headStyles: { fillColor:[37,99,235], textColor:255, fontStyle:'bold' },
+      footStyles: { fillColor:[241,245,249], textColor:[15,23,42], fontStyle:'bold' },
+      columnStyles: { 0:{cellWidth:8}, 1:{cellWidth:22}, 2:{cellWidth:22}, 3:{cellWidth:16}, 9:{halign:'center', cellWidth:14}, 10:{halign:'right', cellWidth:24} },
+      showFoot: 'lastPage',
+      margin: { left:14, right:14, bottom:22 }
+    });
+
+    let y = doc.lastAutoTable.finalY + 16;
+    if (y > H - 24) { doc.addPage(); y = 30; }
+    doc.setFontSize(9); doc.setTextColor(51,65,85); doc.setDrawColor(100,116,139); doc.setLineWidth(.3);
+    doc.line(14, y, 84, y);          doc.text('Dispatched by (Name & Sign)', 14, y+5);
+    doc.line(110, y, 190, y);        doc.text('Courier Executive (Name, Sign & Stamp)', 110, y+5);
+    doc.line(215, y, W-14, y);       doc.text('Pickup Date / Time', 215, y+5);
+  });
+
+  const total = doc.getNumberOfPages();
+  for (let p = 1; p <= total; p++) {
+    doc.setPage(p); doc.setFontSize(8); doc.setTextColor(148,163,184);
+    doc.text(`Generated ${today} by ${pdfTxt(CFG.user||'')}`, 14, H-8);
+    doc.text(`Page ${p} of ${total}`, W-14, H-8, { align:'right' });
+  }
+  doc.save(`Manifest_${label}_${now.toISOString().slice(0,10)}.pdf`);
+  toast(`Manifest ready — ${names.length} courier(s), ${rows.length} record(s).`, 'ok');
 }
 
 // ─── USER TYPE FILTER ─────────────────────────────────────────────────
